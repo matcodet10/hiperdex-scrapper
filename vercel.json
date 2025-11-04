@@ -10,7 +10,7 @@
     },
     "functions": {
         "api/*.js": {
-            "runtime": "nodejs@18.x"
+            "runtime": "nodejs@22.x"
         }
     }
 }
