@@ -1,14 +1,13 @@
 const scapper = require('./scrapper')
 const express = require('express')
 const cors = require('cors')
-const { env } = require('process')
+
 
 const app = express()
 app.use(cors())
 
-// Endpoint utama yang menampilkan panduan
+
 app.get('/api/', (req, res) => {
-    // Tambahkan header HTML untuk tampilan yang lebih baik
     res.header("Content-Type", 'text/html');
     res.send(`
         <!DOCTYPE html>
@@ -20,7 +19,7 @@ app.get('/api/', (req, res) => {
             <p><strong>All Manhwa List at:</strong> <code>/api/all/:page</code> (example: <code>/api/all/1</code>)</p>
             <p><strong>Manhwa Info + Chapters at:</strong> <code>/api/info/:slug</code> (example: <code>/api/info/secret-class</code>)</p>
             <p><strong>Manhwa Images List at:</strong> <code>/api/chapter/:manga/:chapter</code> (example: <code>/api/chapter/nano-machine/chapter-68/</code>)</p>
-            <p><em>This is the Vercel handler. It successfully loaded!</em></p>
+            <p><em>API handler is active and running.</em></p>
         </body>
         </html>
     `)
