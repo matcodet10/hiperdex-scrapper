@@ -1,9 +1,16 @@
 {
-    "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
-    
-  "github": {
-    "silent": true
-  }
-
-    
-  }
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api"
+        }
+    ],
+    "github": {
+        "silent": true
+    },
+    "functions": {
+        "api/*.js": {
+            "runtime": "nodejs20.x"
+        }
+    }
+}
