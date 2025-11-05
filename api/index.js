@@ -49,7 +49,31 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
     res.send(JSON.stringify(result, null, 4))
 })
 
-port = env.PORT || 3000
-app.listen(port, () => {
-    console.log(`Listening to port ${port}`)
-})
+app.get('/api/image-proxy', async (req, res) => {
+    const imageUrl = req.query.url; 
+    
+    if (!imageUrl) {
+        res.setHeader('Access-Control-Allow-Origin', '*'); 
+        return res.status(400).json({ error: 'Image URL is missing' });
+    }
+
+    try {
+        const response = await axios.get(imageUrl, {
+            responseType: 'arraybuffer'
+        });
+        res.setHeader('Access-Control-Allow-Origin', '*'); 
+        res.setHeader('Content-Type', response.headers['content-type']); 
+        res.status(200).send(response.data);
+
+    } catch (error) {
+        console.error('Proxy Error:', error);
+        res.setHeader('Access-Control-Allow-Origin', '*'); 
+        res.status(500).json({ error: 'Failed to proxy image.' });
+    }
+});
+
+//port = env.PORT || 3000
+//app.listen(port, () => {
+    //console.log(`Listening to port ${port}`)
+
+
