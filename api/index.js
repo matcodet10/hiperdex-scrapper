@@ -18,6 +18,7 @@ app.get('/api/', (req, res) => {
 app.get('/api/latest/:page', async (req, res) => {
 
     const result = await scapper.latest(req.params.page)
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.header("Content-Type", 'application/json');
     res.send(JSON.stringify(result, null, 4))
 })
@@ -25,7 +26,7 @@ app.get('/api/latest/:page', async (req, res) => {
 app.get('/api/all/:page', async (req, res) => {
 
     const result = await scapper.all(req.params.page)
-
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 's-maxage=43200');
     res.header("Content-Type", 'application/json');
     res.send(JSON.stringify(result, null, 4))
@@ -34,6 +35,7 @@ app.get('/api/all/:page', async (req, res) => {
 app.get('/api/info/:slug', async (req, res) => {
 
     const result = await scapper.info(req.params.slug)
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.header("Content-Type", 'application/json');
     res.send(JSON.stringify(result, null, 4))
 })
@@ -41,7 +43,7 @@ app.get('/api/info/:slug', async (req, res) => {
 app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
     const result = await scapper.chapter(req.params.manga,req.params.chapter)
-
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 's-maxage=43200');
     res.header("Content-Type", 'application/json');
     res.send(JSON.stringify(result, null, 4))
