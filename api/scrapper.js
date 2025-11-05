@@ -1,9 +1,5 @@
 const cheerio = require('cheerio');
-const axios = require('axios').create({
-   headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-});
+const axios = require('axios');
 
 async function info(slug) {
     let genres = []
@@ -81,13 +77,13 @@ async function all(page) {
     let m_list = []
 
     try{
-        res = await axios.get(`https://hiperdex.com/manga-list/page/${page}`)
+        res = await axios.get(`https://hiperdex.com/mangalist/page/${page}`)
         const body = await res.data;
         const $ = cheerio.load(body)
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-1').each((index, element) => {
+        $('#loop-content .badge-pos-2').each((index, element) => {
 
                 $elements = $(element)
                 image = $elements.find('.page-item-detail').find('img').attr('src')
@@ -151,7 +147,7 @@ async function latest(page) {
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-1').each((index, element) => {
+        $('#loop-content .badge-pos-2').each((index, element) => {
 
                 $elements = $(element)
                 image = $elements.find('.page-item-detail').find('img').attr('src')
@@ -252,6 +248,4 @@ module.exports = {
     all,
     info,
     chapter
-
 }
-
