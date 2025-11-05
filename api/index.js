@@ -2,6 +2,7 @@ const scapper = require('./scrapper')
 const express = require('express')
 const { env } = require('process')
 const cors = require('cors')
+const axios = require('axios');
 
 const app = express()
 app.use(cors())
@@ -75,5 +76,8 @@ app.get('/api/image-proxy', async (req, res) => {
 //port = env.PORT || 3000
 //app.listen(port, () => {
     //console.log(`Listening to port ${port}`)
+
+module.exports = app;
+
 
 
