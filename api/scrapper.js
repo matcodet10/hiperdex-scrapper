@@ -277,8 +277,9 @@ async function chapter(manga, chapter) {
 }
 
 module.exports = {
-	latest,
-    all,
-    info,
-    chapter
+    latest: latest, // Perbaiki penamaan
+    all: all,
+    info: info,
+    chapter: chapter
 };
+
