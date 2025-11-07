@@ -51,20 +51,11 @@ app.get('/api/image-proxy', async (req, res) => {
     
     const MAX_WIDTH = 800; // Resolusi Target Final
     const REFERER_URL = 'https://hiperdex.com/'; 
+    const HOST_URL = 'hiperdex.com'; // HOST BARU DITAMBAHKAN
 
     if (!imageUrl) {
-        return res.status(400).json({ error: 'Image URL is missing' });
-    }
-
-    // Mempersiapkan VERCEL FUNCTION TIMEOUT agresif
-    const VERCEL_FUNCTION_TIMEOUT = 10000; 
-    const timeout = setTimeout(() => {
-        if (!res.headersSent) {
-             console.error('VERCEL FUNCTION HANG: Timed out manually after 10 seconds.');
-             res.status(504).json({ error: 'Function execution timed out (forced).' });
-        }
-    }, VERCEL_FUNCTION_TIMEOUT);
-
+// ...
+// ...
     try {
         // 1. Ambil data gambar (dengan Referer dan Timeout)
         const response = await axios.get(imageUrl, {
@@ -73,11 +64,9 @@ app.get('/api/image-proxy', async (req, res) => {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
                 'Referer': REFERER_URL, 
+                'Host': HOST_URL, // <--- PERBAIKAN KRITIS
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
             },
-            httpAgent: new http.Agent({ keepAlive: true }),
-            httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: false }),
-        });
         
         let imageProcessor = sharp(response.data); 
         
@@ -112,6 +101,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
