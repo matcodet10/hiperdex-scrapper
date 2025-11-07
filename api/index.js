@@ -65,33 +65,37 @@ app.get('/api/image-proxy', async (req, res) => {
   try {
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
+      decompress: true,
       headers: {
+        'User-Agent': req.headers['user-agent'] ||
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Referer': 'https://hiperdex.com/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'image/*,*/*'
       }
     });
 
-    let image = sharp(response.data);
-    const metadata = await image.metadata();
+    const inputBuffer = Buffer.from(response.data);
 
-    // 🔥 Resize hanya jika tinggi gambar terlalu panjang
-    if (metadata.height && metadata.height > 6000) {
-      image = image.resize({
-        height: 6000, // batas aman WebGL
+    // ✅ Resize untuk mencegah WebGL crash
+    const processedBuffer = await sharp(inputBuffer)
+      .resize({
+        width: 720,        // lebar default komik
+        height: 3500,      // ↓ Batas tinggi aman (kunci fix WebGL!)
+        fit: "inside",
         withoutEnlargement: true
-      });
-    }
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer();
 
-    const output = await image.jpeg({ quality: 85 }).toBuffer();
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.send(output);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Content-Type", "image/jpeg");
+    return res.status(200).send(processedBuffer);
 
   } catch (err) {
     console.error("Proxy Error:", err.message);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(404).json({ error: 'Failed to fetch image.' });
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.status(404).json({ error: "Failed to fetch or process image." });
   }
 });
 // === AKHIR PERBAIKAN ENDPOINT IMAGE PROXY ===
@@ -102,6 +106,7 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
 
 
