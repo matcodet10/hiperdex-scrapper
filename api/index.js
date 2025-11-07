@@ -2,9 +2,10 @@ const scapper = require('./scrapper')
 const express = require('express')
 const { env } = require('process')
 const cors = require('cors')
-// --- Import Baru ---
 const axios = require('axios'); 
 const sharp = require('sharp');
+const https = require('https');
+const http = require('http'); 
 // --------------------
 
 const app = express()
@@ -71,9 +72,11 @@ app.get('/api/image-proxy', async (req, res) => {
         'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
         'Connection': 'keep-alive' 
     },
-            
-    httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
-    // ----------------------------------------------------
+    // --- KUNCI SOLUSI: Konfigurasi Agent untuk Stabilitas Koneksi ---
+    httpAgent: new http.Agent({ keepAlive: true }),
+    httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: false }), // Pastikan SSL Bypass
+    timeout: 15000,
+    // ------------------------------------------------------------------
 });
         
         let imageProcessor = sharp(response.data); 
@@ -160,6 +163,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
