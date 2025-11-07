@@ -90,8 +90,8 @@ app.get('/api/image-proxy', async (req, res) => {
 //port = env.PORT || 3000
 //app.listen(port, () => {
     //console.log(`Listening to port ${port}`)
+module.exports = app;
 
-//module.exports = app;
 
 
 
