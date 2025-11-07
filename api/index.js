@@ -88,8 +88,9 @@ app.get('/api/image-proxy', async (req, res) => {
         res.setHeader('Access-Control-Allow-Headers', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET');
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.status(200).send(response.data);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
 
     } catch (error) {
         console.error('Proxy Fetch Error:', error.message); 
@@ -106,4 +107,5 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
