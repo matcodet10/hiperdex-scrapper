@@ -70,7 +70,7 @@ app.get('/api/image-proxy', async (req, res) => {
       headers: {
         'User-Agent': req.headers['user-agent'] ||
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Referer': 'https://hiperdex.com/',
+        'Referer': 'https://hiperdex.org/',
         'Accept': 'image/*,*/*'
       }
     });
@@ -91,6 +91,7 @@ app.get('/api/image-proxy', async (req, res) => {
 });
 
 module.exports = app;
+
 
 
 
