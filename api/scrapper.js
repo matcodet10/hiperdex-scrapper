@@ -203,44 +203,75 @@ async function latest(page) {
 
 async function chapter(manga,chapter) {
 
-    let ch_list = []
+    let images = [] 
 
-    try{
-        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    try{
+        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
+        const body = await res.data;
+        const $ = cheerio.load(body)
 
-        $('.read-container img').each((index, element) => {
+        $('.read-container img').each((index, element) => {
 
-                $elements = $(element)
-                image = $elements.attr('src').trim()
+            $elements = $(element)
+            const image_url = $elements.attr('src')?.trim();
 
-                ch_list.push({'ch': image})     
-        })
+            // 1. Coba ambil dari atribut standar
+            let original_width = parseInt($elements.attr('width')) || 0;
+            let original_height = parseInt($elements.attr('height')) || 0;
+            
+            // 2. Jika 0, coba ambil dari atribut data-width/data-height (Sering digunakan di web modern)
+            if (original_width === 0) {
+                 original_width = parseInt($elements.attr('data-width')) || 0;
+            }
+            if (original_height === 0) {
+                 original_height = parseInt($elements.attr('data-height')) || 0;
+            }
+            
+            // 3. Jika masih 0, coba ambil dari atribut data-original
+            if (original_width === 0) {
+                 original_width = parseInt($elements.attr('data-original-width')) || 0;
+            }
+            if (original_height === 0) {
+                 original_height = parseInt($elements.attr('data-original-height')) || 0;
+            }
+            
+            // ---------------------------------------------
+            
+            if (image_url) {
+                images.push({
+                    'url': image_url, 
+                    'width': original_width, 
+                    'height': original_height 
+                })    
+            }
+        })
 
-        let manga_title = $('#chapter-heading').text().trim()
-        let manga_url = $('.breadcrumb > li:nth-child(2) > a:nth-child(1)').attr('href')
-        
-        let current_ch = $('.active').text().trim()
-        
-        let prev = $('.prev_page').attr('href')
-        let next = $('.next_page').attr('href')
-        
+        // ... (bagian navigasi dan metadata lainnya tetap sama)
 
-        return await ({
-            'manga': manga_title,
-            'manga_url':manga_url,
-            'current_ch': current_ch,
-            'chapters': ch_list,
-            'nav':[{
-                'prev': prev,
-                'next': next
-            }]
-        })
-     } catch (error) {
-        return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
-     }
+        let manga_title = $('#chapter-heading').text().trim()
+        let manga_url = $('.breadcrumb > li:nth-child(2) > a:nth-child(1)').attr('href')
+        
+        let current_ch = $('.active').text().trim()
+        
+        let prev = $('.prev_page').attr('href')
+        let next = $('.next_page').attr('href')
 
+
+        return await ({
+            'manga': manga_title,
+            'manga_url': manga_url,
+            'current_ch': current_ch,
+            'images': images, // Pastikan ini 'images' (bukan 'chapters')
+            'nav':[{
+                'prev': prev,
+                'next': next
+            }]
+        })
+    } catch (error) {
+        // Logging error yang lebih baik untuk debugging di Vercel
+        console.error('Scrapper Chapter Error:', error.message); 
+        return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
+    }
 }
 
 module.exports = {
@@ -249,3 +280,4 @@ module.exports = {
     info,
     chapter
 }
+
