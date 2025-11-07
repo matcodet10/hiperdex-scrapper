@@ -65,8 +65,14 @@ app.get('/api/image-proxy', async (req, res) => {
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.109 Safari/537.36 Edg/120.0.2210.61',
-                'Referer': 'https://hiperdex.com/' // Mengacu ke domain target
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+                'Referer': 'https://hiperdex.com/',
+                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Host': 'i1.r2d2storage.com',
+                'Connection': 'keep-alive'
             }
         });
         
@@ -108,4 +114,5 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
