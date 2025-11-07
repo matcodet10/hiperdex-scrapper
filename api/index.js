@@ -119,9 +119,17 @@ app.get('/api/image-proxy', async (req, res) => {
         res.status(200).send(processedBuffer);
 
     } catch (error) {
-        console.error('Proxy Fetch/Process Error:', error.message);
-        res.status(500).json({ error: 'Failed to fetch or process image tile.' });
+    // Logging error yang lebih detail
+    console.error('PROXY FETCH/PROCESS ERROR:', error.message);
+    // Tambahkan log untuk status jika error adalah error response Axios
+    if (error.response) {
+         console.error('AXIOS RESPONSE ERROR:', error.response.status, error.response.statusText);
+         // Jika server sumber memblokir (403), kita akan melihatnya di sini
+         return res.status(500).json({ error: `Server Blocked: ${error.response.status}` });
     }
+    // Lemparkan 500
+    res.status(500).json({ error: 'Failed to process image tile.' });
+}
 });
 // -------------------------------------------------------------
 
@@ -133,6 +141,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
