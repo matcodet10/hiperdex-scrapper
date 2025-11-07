@@ -50,111 +50,38 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 // --- ENDPOINT IMAGE PROXY BARU (Untuk Tiling/Cropping) ---
 app.get('/api/image-proxy', async (req, res) => {
-    const imageUrl = req.query.url; 
-    // Ambil parameter crop_y dan crop_h, pastikan di-parse sebagai integer
-    const crop_y = parseInt(req.query.crop_y);
-    const crop_h = parseInt(req.query.crop_h);      
-    
-    const MAX_WIDTH = 800; 
-    const REFERER_URL = 'https://hiperdex.com/'; 
+    const imageUrl = req.query.url;
+    const REFERER_URL = 'https://hiperdex.com/';
 
     if (!imageUrl) {
         return res.status(400).json({ error: 'Image URL is missing' });
     }
 
     try {
-        // 1. Ambil data gambar dari sumber asli
+        // HANYA MENGAMBIL DATA (AXIOS)
         const response = await axios.get(imageUrl, {
-    responseType: 'arraybuffer',
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
-        'Referer': REFERER_URL, 
-        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        'Connection': 'keep-alive' 
-    },
-    // --- KUNCI SOLUSI: Konfigurasi Agent untuk Stabilitas Koneksi ---
-    httpAgent: new http.Agent({ keepAlive: true }),
-    httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: false }), // Pastikan SSL Bypass
-    timeout: 15000,
-    // ------------------------------------------------------------------
-});
-        
-        let imageProcessor = sharp(response.data); 
-        
-        // 2. Dapatkan metadata asli
-        const metadata = await imageProcessor.metadata();
-        const originalWidth = metadata.width;
-
-        // 3. Terapkan Resizing Lebar (wajib)
-        imageProcessor = imageProcessor.resize({ 
-            width: MAX_WIDTH, 
-            withoutEnlargement: true 
+            responseType: 'arraybuffer', // Ambil sebagai buffer
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
+                'Referer': REFERER_URL, 
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            },
+            // Gunakan Agent yang sudah diperbaiki (PENTING)
+            httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+            timeout: 20000, // Perpanjang timeout maksimal untuk uji coba
         });
 
-        // 4. Terapkan Cropping jika parameter valid
-        // index.js (di dalam app.get('/api/image-proxy', ...))
-// ...
-
-// 4. Terapkan Cropping jika parameter valid
-if (!isNaN(crop_h) && crop_h > 0) {
-
-    // Hitung faktor skala
-    const scaleFactor = MAX_WIDTH / originalWidth;
-    
-    // Terapkan skala pada posisi Y dan Tinggi Potongan
-    const scaledCropY = parseInt(crop_y * scaleFactor);
-    const scaledCropH = parseInt(crop_h * scaleFactor);
-
-    // --- TAMBAHAN KRITIS UNTUK MENGATASI BAD EXTRACT AREA ---
-    // Dapatkan tinggi gambar setelah di-resize (di sini kita harus mengasumsikan)
-    // Untuk lebih aman, kita biarkan Sharp menghitung tinggi hasil resize
-    let tempProcessor = sharp(response.data).resize({ width: MAX_WIDTH, withoutEnlargement: true });
-    const resizedMetadata = await tempProcessor.metadata();
-    const scaledImageHeight = resizedMetadata.height; 
-    
-    // Jika tinggi potongan melebihi batas gambar setelah di-resize, potong sisa tingginya saja.
-    let safeCropH = scaledCropH;
-    if (scaledCropY + scaledCropH > scaledImageHeight) {
-         safeCropH = scaledImageHeight - scaledCropY;
-    }
-    // --------------------------------------------------------
-
-    if (scaledCropY >= 0 && safeCropH > 0) {
-        imageProcessor = imageProcessor.extract({ 
-            left: 0, 
-            top: scaledCropY, 
-            width: MAX_WIDTH, 
-            height: safeCropH // GUNAKAN safeCropH
-        });
-    } else {
-         console.warn(`[Proxy Warning] Invalid crop parameters (Final Tile Error): Y=${scaledCropY}, H=${safeCropH}. Skipping crop.`);
-    }
-}
-
-// ...
-        
-        // 5. Konversi dan kirim
-        const processedBuffer = await imageProcessor.toFormat('jpeg').toBuffer(); // Default ke JPEG
-        
-        res.setHeader('Content-Type', 'image/jpeg'); 
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); 
-        res.status(200).send(processedBuffer);
+        // LANGSUNG KIRIM BUFFER MENTAH KE CLIENT (TANPA SHARP)
+        res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.status(200).send(response.data);
 
     } catch (error) {
-    // Logging error yang lebih detail
-    console.error('PROXY FETCH/PROCESS ERROR:', error.message);
-    // Tambahkan log untuk status jika error adalah error response Axios
-    if (error.response) {
-         console.error('AXIOS RESPONSE ERROR:', error.response.status, error.response.statusText);
-         // Jika server sumber memblokir (403), kita akan melihatnya di sini
-         return res.status(500).json({ error: `Server Blocked: ${error.response.status}` });
+        console.error('PROXY FETCH/NETWORK ERROR:', error.message);
+        res.status(500).json({ error: 'Network test failed: Could not fetch image buffer.' });
     }
-    // Lemparkan 500
-    res.status(500).json({ error: 'Failed to process image tile.' });
-}
 });
-// -------------------------------------------------------------
-
+// ...
 
 port = env.PORT || 3000
 app.listen(port, () => {
@@ -163,6 +90,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
