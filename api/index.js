@@ -54,7 +54,7 @@ app.get('/api/image-proxy', async (req, res) => {
     const crop_y = parseInt(req.query.crop_y);
     const crop_h = parseInt(req.query.crop_h);      
     
-    const MAX_WIDTH = 1200; 
+    const MAX_WIDTH = 800; 
     const REFERER_URL = 'https://hiperdex.com/'; 
 
     if (!imageUrl) {
@@ -130,5 +130,6 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
