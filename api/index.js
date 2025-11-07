@@ -94,9 +94,9 @@ app.get('/api/image-split', async (req, res) => {
     return res.json({ chunks });
 
   } catch (err) {
-    console.error("Split Index Error:", err.message);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.status(500).json({ error: "Could not split image." });
+  console.error("[SPLIT ERROR]", err); // ✅ Tambahkan ini
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  return res.status(500).json({ error: "Could not split image.", detail: err.message });
   }
 });
 
@@ -135,13 +135,14 @@ app.get('/api/image-chunk', async (req, res) => {
     return res.status(200).send(chunk);
 
   } catch (err) {
-    console.error("Split Piece Error:", err.message);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.status(500).json({ error: "Could not return chunk." });
-  }
+  console.error("[SPLIT ERROR]", err); // ✅ Tambahkan ini
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  return res.status(500).json({ error: "Could not split image.", detail: err.message });
+}
 });
 
 module.exports = app;
+
 
 
 
