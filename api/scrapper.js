@@ -202,9 +202,7 @@ async function latest(page) {
 
 
 async function chapter(manga,chapter) {
-
-    let ch_list = []
-
+    let images = []
     try{
         res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
         const body = await res.data;
@@ -212,10 +210,19 @@ async function chapter(manga,chapter) {
 
         $('.read-container img').each((index, element) => {
 
-                $elements = $(element)
-                image = $elements.attr('src').trim()
-
-                ch_list.push({'ch': image})     
+            $elements = $(element)
+            const image_url = $elements.attr('src')?.trim();
+            const original_width = parseInt($elements.attr('width')) || 0;
+            const original_height = parseInt($elements.attr('height')) || 0;
+       
+            
+            if (image_url) {
+                images.push({
+                    'url': image_url
+                    'width': original_width, 
+                    'height': original_height 
+                })    
+            }
         })
 
         let manga_title = $('#chapter-heading').text().trim()
@@ -229,17 +236,18 @@ async function chapter(manga,chapter) {
 
         return await ({
             'manga': manga_title,
-            'manga_url':manga_url,
+            'manga_url': manga_url,
             'current_ch': current_ch,
-            'chapters': ch_list,
+            'images': images,
             'nav':[{
                 'prev': prev,
                 'next': next
             }]
         })
-     } catch (error) {
+    } catch (error) {
+        console.error('Scrapper Chapter Error:', error);
         return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
-     }
+    }
 
 }
 
@@ -249,3 +257,4 @@ module.exports = {
     info,
     chapter
 }
+
