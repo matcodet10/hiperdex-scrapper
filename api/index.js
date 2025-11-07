@@ -59,29 +59,28 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 // === PERBAIKAN ENDPOINT IMAGE PROXY ===
 app.get('/api/image-proxy', async (req, res) => {
-  let imageUrl = req.query.url;
+  const imageUrl = req.query.url;
   if (!imageUrl) return res.status(400).json({ error: 'Image URL missing' });
-
-  // ✅ Fix Double-Encoded URL → mencegah 127.0.0.1 redirect
-  imageUrl = decodeURIComponent(imageUrl);
-  imageUrl = imageUrl.replace(/^http:\//, 'http://').replace(/^https:\//, 'https://');
 
   try {
     const response = await axios({
       method: 'GET',
       url: imageUrl,
-      responseType: 'stream',
+      responseType: 'stream', // ✅ STREAM langsung (tidak buffer)
       headers: {
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Referer': 'https://hiperdex.org/',
+        'User-Agent': req.headers['user-agent'] ||
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Referer': 'https://hiperdex.com/',
         'Accept': 'image/*,*/*'
       }
     });
 
+    // ✅ Salin content type dari sumber
     res.setHeader("Content-Type", response.headers['content-type']);
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "public, max-age=86400");
 
+    // ✅ STREAM langsung ke client → Anti Crash!
     response.data.pipe(res);
 
   } catch (err) {
