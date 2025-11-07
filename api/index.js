@@ -6,6 +6,7 @@ const cors = require('cors');
 const axios = require('axios');
 const https = require('https');
 const http = require('http');
+const sharp = require('sharp');
 // Catatan: Sharp TIDAK diperlukan di sini
 // ---------------------------------
 
@@ -64,30 +65,39 @@ app.get('/api/image-proxy', async (req, res) => {
   try {
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
-      decompress: true, // <--- PENTING
+      decompress: true, // pastikan gzip dll dibaca
       headers: {
-        'User-Agent': req.headers['user-agent'],
-        'Referer': imageUrl,
-        'Accept': 'image/*,*/*'
-        // ❗ JANGAN tambahkan 'Accept-Encoding' lagi
+        'User-Agent': req.headers['user-agent'] || 
+          'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Mobile',
+        'Referer': 'https://hiperdex.com/',
+        'Accept': 'image/*,*/*',
       }
     });
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const inputBuffer = Buffer.from(response.data);
 
-    res.end(Buffer.from(response.data));
+    // ✅ Resize + Convert ke JPEG agar WebGL stabil
+    const output = await sharp(inputBuffer)
+      .resize({
+        width: 1600,
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // cache 1 hari
+    res.setHeader('Content-Type', 'image/jpeg');
+
+    return res.status(200).send(output);
 
   } catch (err) {
     console.error("Proxy Error:", err.message);
+
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(404).json({ error: 'Failed to fetch image.' });
+    return res.status(404).json({ error: 'Failed to fetch or process image.' });
   }
 });
-
 // === AKHIR PERBAIKAN ENDPOINT IMAGE PROXY ===
 
 
@@ -96,6 +106,7 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
 
 
