@@ -89,27 +89,46 @@ app.get('/api/image-proxy', async (req, res) => {
         });
 
         // 4. Terapkan Cropping jika parameter valid
-        if (!isNaN(crop_h) && crop_h > 0) {
+        // index.js (di dalam app.get('/api/image-proxy', ...))
+// ...
+
+// 4. Terapkan Cropping jika parameter valid
+if (!isNaN(crop_h) && crop_h > 0) {
 
     // Hitung faktor skala
     const scaleFactor = MAX_WIDTH / originalWidth;
     
     // Terapkan skala pada posisi Y dan Tinggi Potongan
-    // PENTING: Gunakan parseInt() BUKAN Math.round()
     const scaledCropY = parseInt(crop_y * scaleFactor);
     const scaledCropH = parseInt(crop_h * scaleFactor);
 
-    if (scaledCropY >= 0 && scaledCropH > 0) {
+    // --- TAMBAHAN KRITIS UNTUK MENGATASI BAD EXTRACT AREA ---
+    // Dapatkan tinggi gambar setelah di-resize (di sini kita harus mengasumsikan)
+    // Untuk lebih aman, kita biarkan Sharp menghitung tinggi hasil resize
+    let tempProcessor = sharp(response.data).resize({ width: MAX_WIDTH, withoutEnlargement: true });
+    const resizedMetadata = await tempProcessor.metadata();
+    const scaledImageHeight = resizedMetadata.height; 
+    
+    // Jika tinggi potongan melebihi batas gambar setelah di-resize, potong sisa tingginya saja.
+    let safeCropH = scaledCropH;
+    if (scaledCropY + scaledCropH > scaledImageHeight) {
+         safeCropH = scaledImageHeight - scaledCropY;
+    }
+    // --------------------------------------------------------
+
+    if (scaledCropY >= 0 && safeCropH > 0) {
         imageProcessor = imageProcessor.extract({ 
             left: 0, 
             top: scaledCropY, 
             width: MAX_WIDTH, 
-            height: scaledCropH 
+            height: safeCropH // GUNAKAN safeCropH
         });
     } else {
-         console.warn(`[Proxy Warning] Invalid crop parameters after scaling: Y=${scaledCropY}, H=${scaledCropH}. Skipping crop.`);
+         console.warn(`[Proxy Warning] Invalid crop parameters (Final Tile Error): Y=${scaledCropY}, H=${safeCropH}. Skipping crop.`);
     }
 }
+
+// ...
         
         // 5. Konversi dan kirim
         const processedBuffer = await imageProcessor.toFormat('jpeg').toBuffer(); // Default ke JPEG
@@ -141,6 +160,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
