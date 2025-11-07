@@ -63,7 +63,6 @@ app.get('/api/image-split', async (req, res) => {
   if (!imageUrl) return res.status(400).json({ error: 'Image URL missing' });
 
   try {
-    // Ambil image dari sumber
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
       headers: {
@@ -74,24 +73,25 @@ app.get('/api/image-split', async (req, res) => {
     });
 
     const inputBuffer = Buffer.from(response.data);
-    const img = sharp(inputBuffer);
 
-    // Ambil metadata gambar → untuk tahu tinggi real
+    // ✅ Convert dulu ke JPEG agar Sharp bisa handle metadata
+    const jpgBuffer = await sharp(inputBuffer)
+      .jpeg({ quality: 90 })
+      .toBuffer();
+
+    const img = sharp(jpgBuffer);
     const { width, height } = await img.metadata();
-    const CHUNK_HEIGHT = 2800; // ✅ Aman untuk WebGL, tidak terlalu kecil
 
-    // Hitung jumlah potongan
-    const chunks = Math.ceil(height / CHUNK_HEIGHT);
-    const vercelBase = `https://${req.headers.host}/api/image-chunk`;
+    const CHUNK_HEIGHT = 2800;
+    const totalChunks = Math.ceil(height / CHUNK_HEIGHT);
 
-    // Kembalikan daftar URL potongan
-    const result = [];
-    for (let i = 0; i < chunks; i++) {
-      result.push(`${vercelBase}?url=${encodeURIComponent(imageUrl)}&index=${i}`);
-    }
+    const base = `https://${req.headers.host}/api/image-chunk`;
+    const chunks = Array.from({ length: totalChunks }, (_, i) =>
+      `${base}?url=${encodeURIComponent(imageUrl)}&index=${i}`
+    );
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.json({ chunks: result });
+    return res.json({ chunks });
 
   } catch (err) {
     console.error("Split Index Error:", err.message);
@@ -115,23 +115,25 @@ app.get('/api/image-chunk', async (req, res) => {
     });
 
     const inputBuffer = Buffer.from(response.data);
-    const img = sharp(inputBuffer);
-    const { height } = await img.metadata();
+
+    // ✅ Convert to JPEG dulu juga di sini
+    const baseImage = sharp(await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer());
+    const meta = await baseImage.metadata();
 
     const CHUNK_HEIGHT = 2800;
     const top = index * CHUNK_HEIGHT;
 
-    // Crop bagian ke-N
-    const chunk = await img.extract({
+    const chunk = await baseImage.extract({
       left: 0,
       top,
-      width: null, // otomatis sesuai gambar asli
-      height: Math.min(CHUNK_HEIGHT, height - top)
+      width: meta.width,
+      height: Math.min(CHUNK_HEIGHT, meta.height - top)
     }).jpeg({ quality: 85 }).toBuffer();
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Content-Type", "image/jpeg");
     return res.status(200).send(chunk);
+
   } catch (err) {
     console.error("Split Piece Error:", err.message);
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -140,6 +142,7 @@ app.get('/api/image-chunk', async (req, res) => {
 });
 
 module.exports = app;
+
 
 
 
