@@ -59,6 +59,7 @@ app.get('/api/image-proxy', async (req, res) => {
     
     const MAX_WIDTH = 800; // Resolusi Target Final
     const REFERER_URL = 'https://hiperdex.com/'; 
+    const TILING_THRESHOLD = 10000; // Ambang batas agar gambar pendek tidak dipotong
 
     if (!imageUrl) {
         return res.status(400).json({ error: 'Image URL is missing' });
@@ -100,42 +101,42 @@ app.get('/api/image-proxy', async (req, res) => {
             withoutEnlargement: true 
         });
 
-        // 4. Terapkan Cropping jika parameter valid
-        if (!isNaN(crop_h) && crop_h > 0) {
-    // Pastikan originalWidth tidak nol untuk menghindari pembagian nol
-    const scaleFactor = originalWidth > 0 ? MAX_WIDTH / originalWidth : 1; 
-    
-    // PENTING: Menggunakan parseInt() untuk Y dan H
-    const scaledCropY = parseInt(crop_y * scaleFactor);
-    const scaledCropH = parseInt(crop_h * scaleFactor);
+        // 4. Terapkan Cropping hanya jika gambar panjang DAN ada parameter crop
+        if (metadata.height > TILING_THRESHOLD && !isNaN(crop_h) && crop_h > 0) {
+            
+            const scaleFactor = originalWidth > 0 ? MAX_WIDTH / originalWidth : 1;
+            
+            // PENTING: Menggunakan parseInt() untuk mengatasi bug pembulatan Sharp
+            const scaledCropY = parseInt(crop_y * scaleFactor);
+            const scaledCropH = parseInt(crop_h * scaleFactor);
 
-    // --- PERBAIKAN KRITIS: Menghitung Tinggi Akhir Gambar SECARA MATEMATIS ---
-    // Tinggi Gambar Akhir (yang di-resize) dihitung dari metadata.height asli.
-    // Kita gunakan Math.floor untuk meniru perilaku Sharp dalam pembulatan batas.
-    const scaledImageHeight = Math.floor(metadata.height * scaleFactor);
+            // Logika safeCropH (Perbaikan Matematis)
+            // Menghitung tinggi akhir secara matematis untuk menghindari "bad extract area"
+            const scaledImageHeight = Math.floor(metadata.height * scaleFactor);
+            let safeCropH = scaledCropH;
+            
+            // Perbaikan untuk tile terakhir (jika y + h melebihi batas)
+            if (scaledCropY + scaledCropH > scaledImageHeight) {
+                 safeCropH = scaledImageHeight - scaledCropY;
+            }
 
-    // Logic safeCropH untuk memperbaiki "bad extract area"
-    let safeCropH = scaledCropH;
-    
-    // Jika potongan yang diminta melebihi batas tinggi gambar yang sudah di-resize,
-    // hitung ulang tinggi potongan agar tepat di batas akhir.
-    if (scaledCropY + scaledCropH > scaledImageHeight) {
-         safeCropH = scaledImageHeight - scaledCropY;
-    }
-
-    if (scaledCropY >= 0 && safeCropH > 0) {
-        imageProcessor = imageProcessor.extract({ 
-            left: 0, 
-            top: scaledCropY, 
-            width: MAX_WIDTH, 
-            height: safeCropH // GUNAKAN safeCropH
-        });
-        console.log(`[DEBUG EXTRACT] SUCCESS: Extracting Y=${scaledCropY}, H=${safeCropH} (Safe)`);
-    } else {
-        // Ini akan menangani kasus di mana safeCropH dihitung menjadi 0 atau negatif
-        console.warn(`[Proxy Warning] Skipping crop due to zero/negative dimension: Y=${scaledCropY}, H=${safeCropH}.`);
-    }
-}
+            if (scaledCropY >= 0 && safeCropH > 0) {
+                imageProcessor = imageProcessor.extract({ 
+                    left: 0, 
+                    top: scaledCropY, 
+                    width: MAX_WIDTH, 
+                    height: safeCropH // GUNAKAN safeCropH
+                });
+                console.log(`[DEBUG EXTRACT] SUCCESS: Extracting Y=${scaledCropY}, H=${safeCropH} (Safe)`);
+            } else {
+                // Ini akan menangkap error "zero/negative dimension"
+                console.warn(`[Proxy Warning] Skipping crop due to zero/negative dimension: Y=${scaledCropY}, H=${safeCropH}.`);
+            }
+        } else {
+            // KODE BYPASS: Gambar pendek (<10000px) tidak dipotong.
+            // imageProcessor sudah di-resize di Langkah 3.
+            console.log(`[DEBUG BYPASS] Image skipped tiling (Height: ${metadata.height}px). Sending only resized image.`);
+        }
         
         // 5. Konversi dan kirim
         const processedBuffer = await imageProcessor.toFormat('jpeg').toBuffer(); // Default ke JPEG
@@ -163,4 +164,3 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
-
