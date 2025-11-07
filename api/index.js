@@ -58,39 +58,89 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 })
 
 // === PERBAIKAN ENDPOINT IMAGE PROXY ===
-app.get('/api/image-proxy', async (req, res) => {
+app.get('/api/image-split', async (req, res) => {
   const imageUrl = req.query.url;
   if (!imageUrl) return res.status(400).json({ error: 'Image URL missing' });
 
   try {
-    const response = await axios({
-      method: 'GET',
-      url: imageUrl,
-      responseType: 'stream', // ✅ STREAM langsung (tidak buffer)
+    // Ambil image dari sumber
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
       headers: {
-        'User-Agent': req.headers['user-agent'] ||
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'User-Agent': 'Mozilla/5.0',
         'Referer': 'https://hiperdex.org/',
         'Accept': 'image/*,*/*'
       }
     });
 
-    // ✅ Salin content type dari sumber
-    res.setHeader("Content-Type", response.headers['content-type']);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "public, max-age=86400");
+    const inputBuffer = Buffer.from(response.data);
+    const img = sharp(inputBuffer);
 
-    // ✅ STREAM langsung ke client → Anti Crash!
-    response.data.pipe(res);
+    // Ambil metadata gambar → untuk tahu tinggi real
+    const { width, height } = await img.metadata();
+    const CHUNK_HEIGHT = 2800; // ✅ Aman untuk WebGL, tidak terlalu kecil
+
+    // Hitung jumlah potongan
+    const chunks = Math.ceil(height / CHUNK_HEIGHT);
+    const vercelBase = `https://${req.headers.host}/api/image-chunk`;
+
+    // Kembalikan daftar URL potongan
+    const result = [];
+    for (let i = 0; i < chunks; i++) {
+      result.push(`${vercelBase}?url=${encodeURIComponent(imageUrl)}&index=${i}`);
+    }
+
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.json({ chunks: result });
 
   } catch (err) {
-    console.error("Proxy Error:", err.message);
+    console.error("Split Index Error:", err.message);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.status(500).json({ error: "Proxy server failed." });
+    return res.status(500).json({ error: "Could not split image." });
+  }
+});
+
+app.get('/api/image-chunk', async (req, res) => {
+  const imageUrl = req.query.url;
+  const index = parseInt(req.query.index || "0", 10);
+
+  try {
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://hiperdex.org/',
+        'Accept': 'image/*,*/*'
+      }
+    });
+
+    const inputBuffer = Buffer.from(response.data);
+    const img = sharp(inputBuffer);
+    const { height } = await img.metadata();
+
+    const CHUNK_HEIGHT = 2800;
+    const top = index * CHUNK_HEIGHT;
+
+    // Crop bagian ke-N
+    const chunk = await img.extract({
+      left: 0,
+      top,
+      width: null, // otomatis sesuai gambar asli
+      height: Math.min(CHUNK_HEIGHT, height - top)
+    }).jpeg({ quality: 85 }).toBuffer();
+
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "image/jpeg");
+    return res.status(200).send(chunk);
+  } catch (err) {
+    console.error("Split Piece Error:", err.message);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.status(500).json({ error: "Could not return chunk." });
   }
 });
 
 module.exports = app;
+
 
 
 
