@@ -64,14 +64,17 @@ app.get('/api/image-proxy', async (req, res) => {
     try {
         // 1. Ambil data gambar dari sumber asli
         const response = await axios.get(imageUrl, {
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
-                'Referer': REFERER_URL, 
-                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                'Connection': 'keep-alive'
-            }
-        });
+    responseType: 'arraybuffer',
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
+        'Referer': REFERER_URL, 
+        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Connection': 'keep-alive' 
+    },
+            
+    httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
+    // ----------------------------------------------------
+});
         
         let imageProcessor = sharp(response.data); 
         
@@ -130,6 +133,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
