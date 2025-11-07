@@ -63,9 +63,10 @@ app.get('/api/image-proxy', async (req, res) => {
   if (!imageUrl) return res.status(400).json({ error: 'Image URL missing' });
 
   try {
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      decompress: true,
+    const response = await axios({
+      method: 'GET',
+      url: imageUrl,
+      responseType: 'stream', // ✅ STREAM langsung (tidak buffer)
       headers: {
         'User-Agent': req.headers['user-agent'] ||
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -74,48 +75,20 @@ app.get('/api/image-proxy', async (req, res) => {
       }
     });
 
-    const inputBuffer = Buffer.from(response.data);
+    // ✅ Salin content type dari sumber
+    res.setHeader("Content-Type", response.headers['content-type']);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "public, max-age=86400");
 
-    // ✅ Resize untuk mencegah WebGL crash
-    const processed = sharp(inputBuffer)
-  .resize({
-    width: 720,
-    withoutEnlargement: true
-  });
+    // ✅ STREAM langsung ke client → Anti Crash!
+    response.data.pipe(res);
 
-const metadata = await processed.metadata();
-
-// Tinggi maksimal per segmen
-const MAX_SEGMENT_HEIGHT = 1200;
-
-const segments = Math.ceil(metadata.height / MAX_SEGMENT_HEIGHT);
-
-let outputImages = [];
-
-for (let i = 0; i < segments; i++) {
-  const top = i * MAX_SEGMENT_HEIGHT;
-  const height = Math.min(MAX_SEGMENT_HEIGHT, metadata.height - top);
-
-  const segmentBuffer = await processed
-    .extract({ left: 0, top, width: metadata.width, height })
-    .jpeg({ quality: 85 })
-    .toBuffer();
-
-  outputImages.push(segmentBuffer.toString("base64"));
-}
-
-res.setHeader("Access-Control-Allow-Origin", "*");
-return res.json({
-  type: "split",
-  count: segments,
-  images: outputImages
+  } catch (err) {
+    console.error("Proxy Error:", err.message);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.status(500).json({ error: "Proxy server failed." });
+  }
 });
-// === AKHIR PERBAIKAN ENDPOINT IMAGE PROXY ===
-
-
-//port = env.PORT || 3000
-//app.listen(port, () => {
-    //console.log(`Listening to port ${port}`)
 
 module.exports = app;
 
