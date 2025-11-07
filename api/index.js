@@ -58,90 +58,41 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 })
 
 // === PERBAIKAN ENDPOINT IMAGE PROXY ===
-app.get('/api/image-split', async (req, res) => {
-  const imageUrl = req.query.url;
+app.get('/api/image-proxy', async (req, res) => {
+  let imageUrl = req.query.url;
   if (!imageUrl) return res.status(400).json({ error: 'Image URL missing' });
 
+  // ✅ Fix Double-Encoded URL → mencegah 127.0.0.1 redirect
+  imageUrl = decodeURIComponent(imageUrl);
+  imageUrl = imageUrl.replace(/^http:\//, 'http://').replace(/^https:\//, 'https://');
+
   try {
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
+    const response = await axios({
+      method: 'GET',
+      url: imageUrl,
+      responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0',
+        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Referer': 'https://hiperdex.org/',
         'Accept': 'image/*,*/*'
       }
     });
 
-    const inputBuffer = Buffer.from(response.data);
-
-    // ✅ Convert dulu ke JPEG agar Sharp bisa handle metadata
-    const jpgBuffer = await sharp(inputBuffer)
-      .jpeg({ quality: 90 })
-      .toBuffer();
-
-    const img = sharp(jpgBuffer);
-    const { width, height } = await img.metadata();
-
-    const CHUNK_HEIGHT = 2800;
-    const totalChunks = Math.ceil(height / CHUNK_HEIGHT);
-
-    const base = `https://${req.headers.host}/api/image-chunk`;
-    const chunks = Array.from({ length: totalChunks }, (_, i) =>
-      `${base}?url=${encodeURIComponent(imageUrl)}&index=${i}`
-    );
-
+    res.setHeader("Content-Type", response.headers['content-type']);
     res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.json({ chunks });
+    res.setHeader("Cache-Control", "public, max-age=86400");
+
+    response.data.pipe(res);
 
   } catch (err) {
-  console.error("[SPLIT ERROR]", err); // ✅ Tambahkan ini
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  return res.status(500).json({ error: "Could not split image.", detail: err.message });
+    console.error("Proxy Error:", err.message);
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.status(500).json({ error: "Proxy server failed." });
   }
 });
 
-app.get('/api/image-chunk', async (req, res) => {
-  const imageUrl = req.query.url;
-  const index = parseInt(req.query.index || "0", 10);
-
-  try {
-    const response = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': 'https://hiperdex.org/',
-        'Accept': 'image/*,*/*'
-      }
-    });
-
-    const inputBuffer = Buffer.from(response.data);
-
-    // ✅ Convert to JPEG dulu juga di sini
-    const baseImage = sharp(await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer());
-    const meta = await baseImage.metadata();
-
-    const CHUNK_HEIGHT = 2800;
-    const top = index * CHUNK_HEIGHT;
-
-    const chunk = await baseImage.extract({
-      left: 0,
-      top,
-      width: meta.width,
-      height: Math.min(CHUNK_HEIGHT, meta.height - top)
-    }).jpeg({ quality: 85 }).toBuffer();
-
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(chunk);
-
-  } catch (err) {
-  console.error("[SPLIT ERROR]", err); // ✅ Tambahkan ini
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  return res.status(500).json({ error: "Could not split image.", detail: err.message });
-}
-});
-
 module.exports = app;
+
 
 
 
