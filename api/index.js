@@ -37,17 +37,21 @@ app.get('/api/info/:slug', handleScraperEndpoint(scapper.info));
 
 app.get('/api/chapter/:manga/:chapter', handleScraperEndpoint((manga, chapter) => scapper.chapter(manga, chapter)));
 
-// --- ENDPOINT IMAGE PROXY (Sudah Optimal) ---
+// --- ENDPOINT IMAGE PROXY (Final Optimal dengan Cropping/Tiling) ---
 app.get('/api/image-proxy', async (req, res) => {
     const imageUrl = req.query.url; 
+    const crop_y = parseInt(req.query.crop_y || 0); // Posisi Y awal pemotongan
+    const crop_h = parseInt(req.query.crop_h);      // Tinggi pemotongan yang diminta
     
-    // Perbaikan: Hapus res.setHeader('Access-Control-Allow-Origin', '*'); karena sudah ada app.use(cors())
+    // Batas Lebar Maksimal untuk Mobile
+    const MAX_WIDTH = 1200; 
 
     if (!imageUrl) {
         return res.status(400).json({ error: 'Image URL is missing' });
     }
 
     try {
+        // 
         const REFERER_URL = 'https://hiperdex.com/manga/my-new-family-treats-me-well-new/chapter-90/'; 
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
@@ -61,27 +65,52 @@ app.get('/api/image-proxy', async (req, res) => {
         });
         
         const contentType = response.headers['content-type'];
-        const imageBuffer = response.data; 
+        let imageProcessor = sharp(response.data); // Mulai pemrosesan dengan buffer
+        
+        // 1. Dapatkan metadata (ukuran) asli
+        const metadata = await imageProcessor.metadata();
+        const originalWidth = metadata.width;
 
-        if (!contentType || !contentType.startsWith('image/')) {
-            return res.status(403).json({ error: 'Blocked: Target did not return a valid image type.' });
+        // 2. Terapkan Resizing Lebar (selalu dilakukan)
+        imageProcessor = imageProcessor.resize({ 
+            width: MAX_WIDTH, 
+            withoutEnlargement: true 
+        });
+
+        // 3. Terapkan Cropping/Pemotongan jika parameter crop_h diberikan
+        if (crop_h) {
+            // Kita harus menyesuaikan posisi Y (crop_y) agar sesuai dengan lebar baru (1200px)
+            // Hitung faktor skala: (Lebar Baru / Lebar Asli)
+            const scaleFactor = MAX_WIDTH / originalWidth;
+            
+            // Terapkan skala pada posisi Y dan Tinggi Potongan
+            const scaledCropY = Math.round(crop_y * scaleFactor);
+            const scaledCropH = Math.round(crop_h * scaleFactor);
+
+            // Cek apakah hasil skala masih valid
+            if (scaledCropY >= 0 && scaledCropH > 0) {
+                imageProcessor = imageProcessor.extract({ 
+                    left: 0, 
+                    top: scaledCropY, 
+                    width: MAX_WIDTH, 
+                    height: scaledCropH 
+                });
+            } else {
+                 // Ini terjadi jika crop_y atau crop_h tidak valid
+                 console.warn("Crop parameter invalid after scaling. Skipping crop.");
+            }
         }
-
-        const MAX_WIDTH = 1200;
-        const processedBuffer = await sharp(imageBuffer)
-            .resize({ 
-                width: MAX_WIDTH, 
-                withoutEnlargement: true 
-            })
-            .toBuffer();
+        
+        const processedBuffer = await imageProcessor.toBuffer();
         
         res.setHeader('Content-Type', contentType); 
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
+        // Header cache yang lebih agresif untuk gambar yang di-crop
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); 
         res.status(200).send(processedBuffer);
 
     } catch (error) {
-        console.error('Proxy Fetch Error:', error.message);
-        res.status(404).json({ error: 'Failed to fetch or process image from source.' });
+        console.error('Proxy Fetch/Process Error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch or process image from source.' });
     }
 });
 
