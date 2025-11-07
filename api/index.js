@@ -1,12 +1,12 @@
-const scapper = require('./scrapper')
-const express = require('express')
-const { env } = require('process')
-const cors = require('cors')
+const scapper = require('./scrapper');
+const express = require('express');
+const { env } = require('process');
+const cors = require('cors');
+// --- Import Perbaikan Jaringan ---
 const axios = require('axios');
+const sharp = require('sharp');
 const https = require('https');
 const http = require('http');
-// axios, sharp, https, http sudah dihapus di sini
-// --------------------
 
 const app = express()
 app.use(cors())
@@ -112,6 +112,7 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
 
 
