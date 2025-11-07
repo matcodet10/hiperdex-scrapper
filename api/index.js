@@ -63,14 +63,25 @@ app.get('/api/image-proxy', async (req, res) => {
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             headers: {
+                // User-Agent yang Anda dapatkan (Wajib Mobile):
                 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36', 
-                'Referer': 'https://hiperdex.com/', 
+                
+                // Referer Halaman Chapter (Wajib Spesifik):
+                'Referer': 'https://hiperdex.com/',
+                
+                // Header-header Mobile Khas Chrome (Sangat Penting):
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br', // Tambahkan kompresi
                 'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+                'sec-ch-ua-mobile': '?1', // Sinyal Chrome bahwa ini adalah perangkat Mobile
+                'sec-ch-ua-platform': '"Android"', // Sinyal Chrome bahwa OS adalah Android
+
+                // Header Dasar
                 'Host': 'i1.r2d2storage.com',
                 'Connection': 'keep-alive' 
             }
         });
+        // ...
              
         const contentType = response.headers['content-type'];
 
@@ -110,6 +121,7 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
 
 
