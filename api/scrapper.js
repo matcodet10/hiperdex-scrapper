@@ -1,128 +1,251 @@
-const axios = require('axios');
 const cheerio = require('cheerio');
+const axios = require('axios');
 
-const domain = 'https://hiperdex.com'
+async function info(slug) {
+    let genres = []
 
-// --- Fungsi untuk mendapatkan daftar chapter terbaru ---
-exports.latest = async (page) => {
-    try {
-        const response = await axios.get(`${domain}/page/${page}/?m_orderby=latest`)
-        const $ = cheerio.load(response.data)
-        const result = []
+    try{
+        res = await axios.get(`https://hiperdex.com/manga/${slug}`)
+        const body = await res.data;
+        const $ = cheerio.load(body)
 
-        $('.page-content .post-listing .post-item').each((i, el) => {
-            const element = $(el)
-            const slug = element.find('a').attr('href').split('/').slice(-2)[0]
-            const title = element.find('.post-header .post-title a').text().trim()
-            const cover = element.find('.post-thumbnail img').attr('src')
-            const latestChapter = element.find('.post-latest-chapter a').text().trim()
-            const link = element.find('a').attr('href')
+        let manhwa_title = $('.post-title > h1:nth-child(1)').text().trim()
+        let poster = $('.summary_image img').attr('src')
+        let author = $('.author-content a').text().trim()
+        let artist = $('.artist-content a').text().trim()
 
-            result.push({
-                slug: slug,
-                title: title,
-                cover: cover,
-                latestChapter: latestChapter,
-                link: link
-            })
+        let genres_e = $('.genres-content a')
+        
+        $(genres_e).each((i,e)=>{
+            genres.push($(e).text().trim())
         })
 
-        return result
-    } catch (e) {
-        return { error: e.message }
+        let other_name = $('div.post-content_item:nth-child(5) > div:nth-child(2)').text().trim()
+        
+        let status = $('div.post-content_item:nth-child(2) > div:nth-child(2)').text().trim()
+        
+        let description = $('.description-summary').text().trim()
+
+        let ch_list = await chaptersList(`https://hiperdex.com/manga/${slug}/ajax/chapters/`)
+
+         return await ({
+            'page': manhwa_title,
+            'other_name': other_name,
+            'poster': poster,
+            'authors': author,
+            'artists': artist,
+            'genres':genres,
+            'status': status,
+            'description': description,
+            ch_list
+        })
+     } catch (error) {
+        return await ({'error': 'Sorry dude, an error occured! No Info!'})
+     }
+
+}
+
+async function chaptersList(url){
+    let ch_list = []
+
+    try{
+        res = await axios.post(url)
+        const body = await res.data;
+        const $ = cheerio.load(body)
+
+        $('.version-chap li').each((index, element) => {
+
+                $elements = $(element)
+                title = $elements.find('a').text().trim()
+                url = $elements.find('a').attr('href')
+                time = $elements.find('.chapter-release-date').find('i').text()
+                status = $elements.find('.chapter-release-date').find('a').attr('title')
+
+                chapters = {'ch_title': title, 'time': time, 'status': status, 'url': url}
+
+                ch_list.push(chapters)     
+        })
+
+        return await (ch_list)
+    } catch(error) {
+        return await ('Error Getting Chapters!')
     }
 }
 
-// --- Fungsi untuk mendapatkan daftar semua manhwa ---
-exports.all = async (page) => {
-    try {
-        const response = await axios.get(`${domain}/page/${page}/?m_orderby=title`)
-        const $ = cheerio.load(response.data)
-        const result = []
+async function all(page) {
 
-        $('.page-content .post-listing .post-item').each((i, el) => {
-            const element = $(el)
-            const slug = element.find('a').attr('href').split('/').slice(-2)[0]
-            const title = element.find('.post-header .post-title a').text().trim()
-            const cover = element.find('.post-thumbnail img').attr('src')
-            const latestChapter = element.find('.post-latest-chapter a').text().trim()
-            const link = element.find('a').attr('href')
+    let m_list = []
 
-            result.push({
-                slug: slug,
-                title: title,
-                cover: cover,
-                latestChapter: latestChapter,
-                link: link
-            })
+    try{
+        res = await axios.get(`https://hiperdex.com/mangalist/page/${page}`)
+        const body = await res.data;
+        const $ = cheerio.load(body)
+
+        let p_title = $('.c-blog__heading h1').text().trim()
+
+        $('#loop-content .badge-pos-2').each((index, element) => {
+
+                $elements = $(element)
+                image = $elements.find('.page-item-detail').find('img').attr('src')
+                url = $elements.find('.page-item-detail').find('a').attr('href')
+                title = $elements.find('.page-item-detail .post-title').find('h3').text().trim()
+                rating = $elements.find('.total_votes').text().trim()
+
+                chapter = $elements.find('.list-chapter .chapter-item')
+
+                let chapters = []
+                
+                $(chapter).each((i,e)=>{
+
+                    let c_title = $(e).find('a').text().trim()
+                    let c_url = $(e).find('a').attr('href')
+                    let c_date = $(e).find('.post-on').text().trim()
+                    let status = $(e).find('.post-on a').attr('title')
+
+                    chapters.push({
+                        'c_title': c_title,
+                        'c_url': c_url,
+                        'c_date': c_date,
+                        'status': status
+                    })
+                })
+
+                m_list.push({
+                    'title': title,
+                    'rating': rating,
+                    'image': image,
+                    'url': url,
+                    'chapters': chapters
+                })     
         })
 
-        return result
-    } catch (e) {
-        return { error: e.message }
-    }
+        let current = $('.current').text()
+        
+        let last_page = $('.last').attr('href')
+        !last_page?last_page=current:last_page
+
+         return await ({
+            'p_title': p_title,
+            'list': m_list,
+            'current_page': parseInt(current),
+            'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
+        })
+    } catch (error) {
+        return await ({'error': 'Sorry dude, an error occured! No Latest!'})
+     }
+
 }
 
-// --- Fungsi untuk mendapatkan detail manhwa (Info + Daftar Chapter) ---
-exports.info = async (slug) => {
-    try {
-        const response = await axios.get(`${domain}/manga/${slug}`)
-        const $ = cheerio.load(response.data)
-        const result = {}
+async function latest(page) {
 
-        const title = $('.post-title').text().trim()
-        const cover = $('.post-thumbnail img').attr('src')
-        const summary = $('.post-summary').text().trim()
+    let m_list = []
 
-        const genre = []
-        $('.post-content .post-genres a').each((i, el) => {
-            genre.push($(el).text().trim())
+    try{
+        res = await axios.get(`https://hiperdex.com/page/${page}`)
+        const body = await res.data;
+        const $ = cheerio.load(body)
+
+        let p_title = $('.c-blog__heading h1').text().trim()
+
+        $('#loop-content .badge-pos-2').each((index, element) => {
+
+                $elements = $(element)
+                image = $elements.find('.page-item-detail').find('img').attr('src')
+                url = $elements.find('.page-item-detail').find('a').attr('href')
+                title = $elements.find('.page-item-detail .post-title').find('h3').text().trim()
+                rating = $elements.find('.total_votes').text().trim()
+
+                chapter = $elements.find('.list-chapter .chapter-item')
+
+                let chapters = []
+                
+                $(chapter).each((i,e)=>{
+
+                    let c_title = $(e).find('a').text().trim()
+                    let c_url = $(e).find('a').attr('href')
+                    let c_date = $(e).find('.post-on').text().trim()
+                    let status = $(e).find('.post-on a').attr('title')
+
+                    chapters.push({
+                        'c_title': c_title,
+                        'c_url': c_url,
+                        'c_date': c_date,
+                        'status': status
+                    })
+                })
+
+                m_list.push({
+                    'title': title,
+                    'rating': rating,
+                    'image': image,
+                    'url': url,
+                    'chapters': chapters
+                })     
         })
 
-        const chapterList = []
-        $('.list-chapters li').each((i, el) => {
-            const element = $(el)
-            const name = element.find('a').text().trim()
-            const link = element.find('a').attr('href')
-            const chapterSlug = link.split('/').slice(-2)[0]
+        let current = $('.current').text()
+        
+        let last_page = $('.last').attr('href')
+        !last_page?last_page=current:last_page
 
-            chapterList.push({
-                name: name,
-                chapterSlug: chapterSlug,
-                link: link
-            })
+         return await ({
+            'p_title': p_title,
+            'list': m_list,
+            'current_page': parseInt(current),
+            'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
         })
+    } catch (error) {
+        return await ({'error': 'Sorry dude, an error occured! No Latest!'})
+     }
 
-        result.title = title
-        result.cover = cover
-        result.summary = summary
-        result.genre = genre
-        result.chapters = chapterList
-
-        return result
-    } catch (e) {
-        return { error: e.message }
-    }
 }
 
-// --- Fungsi untuk mendapatkan gambar-gambar dalam chapter ---
-exports.chapter = async (manga, chapter) => {
-    try {
-        const response = await axios.get(`${domain}/manga/${manga}/${chapter}`)
-        const $ = cheerio.load(response.data)
-        const result = []
 
-        $('#chapter-content img').each((i, el) => {
-            const element = $(el)
-            const url = element.attr('src')
+async function chapter(manga,chapter) {
 
-            if (url) {
-                result.push(url)
-            }
+    let ch_list = []
+
+    try{
+        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
+        const body = await res.data;
+        const $ = cheerio.load(body)
+
+        $('.read-container img').each((index, element) => {
+
+                $elements = $(element)
+                image = $elements.attr('src').trim()
+
+                ch_list.push({'ch': image})     
         })
 
-        return result
-    } catch (e) {
-        return { error: e.message }
-    }
+        let manga_title = $('#chapter-heading').text().trim()
+        let manga_url = $('.breadcrumb > li:nth-child(2) > a:nth-child(1)').attr('href')
+        
+        let current_ch = $('.active').text().trim()
+        
+        let prev = $('.prev_page').attr('href')
+        let next = $('.next_page').attr('href')
+        
+
+        return await ({
+            'manga': manga_title,
+            'manga_url':manga_url,
+            'current_ch': current_ch,
+            'chapters': ch_list,
+            'nav':[{
+                'prev': prev,
+                'next': next
+            }]
+        })
+     } catch (error) {
+        return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
+     }
+
+}
+
+module.exports = {
+	latest,
+    all,
+    info,
+    chapter
 }
