@@ -3,6 +3,7 @@ const express = require('express')
 const { env } = require('process')
 const cors = require('cors')
 const axios = require('axios');
+const sharp = require('sharp');
 
 const app = express()
 app.use(cors())
@@ -52,8 +53,8 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 app.get('/api/image-proxy', async (req, res) => {
     const imageUrl = req.query.url; 
-    
     res.setHeader('Access-Control-Allow-Origin', '*'); 
+
     if (!imageUrl) {
         return res.status(400).json({ error: 'Image URL is missing' });
     }
@@ -62,10 +63,10 @@ app.get('/api/image-proxy', async (req, res) => {
         const REFERER_URL = 'https://hiperdex.com/manga/my-new-family-treats-me-well-new/chapter-90/'; 
         
         const response = await axios.get(imageUrl, {
-            responseType: 'stream',
+            responseType: 'arraybuffer',
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 
-                'Referer': REFERER_URL,
+                'Referer': REFERER_URL, 
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                 'Host': 'i1.r2d2storage.com',
                 'Connection': 'keep-alive' 
@@ -73,24 +74,30 @@ app.get('/api/image-proxy', async (req, res) => {
         });
         
         const contentType = response.headers['content-type'];
+        const imageBuffer = response.data; 
         if (!contentType || !contentType.startsWith('image/')) {
             return res.status(403).json({ error: 'Blocked: Target did not return a valid image type.' });
         }
-
+        const MAX_WIDTH = 1200;
+        const processedBuffer = await sharp(imageBuffer)
+            .resize({ 
+                width: MAX_WIDTH, 
+                withoutEnlargement: true 
+            })
+            .toBuffer();
+        
         res.setHeader('Content-Type', contentType); 
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
-        response.data.pipe(res);
+        res.status(200).send(processedBuffer);
+
     } catch (error) {
         console.error('Proxy Fetch Error:', error.message);
-        res.status(404).json({ error: 'Failed to fetch image from source.' });
+        res.status(404).json({ error: 'Failed to fetch or process image from source.' });
     }
 });
 
-
-//port = env.PORT || 3000
-//app.listen(port, () => {
-    //console.log(`Listening to port ${port}`)
 module.exports = app;
+
 
 
 
