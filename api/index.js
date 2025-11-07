@@ -17,43 +17,31 @@ app.get('/api/', (req, res) => {
         `)
 })
 
-app.get('/api/latest/:page', async (req, res) => {
+const handleScraperEndpoint = (scraperFunction) => async (req, res) => {
+    try {
+        const result = await scraperFunction(req.params.page || req.params.slug || req.params.manga, req.params.chapter);
+        res.setHeader('Cache-Control', 's-maxage=43200');
+        res.header("Content-Type", 'application/json');
+        res.send(JSON.stringify(result, null, 4));
+    } catch (error) {
+        console.error(`Scraper Endpoint Error (${req.path}):`, error.message);
+        res.status(500).json({ error: 'Failed to process request or fetch data from target.', details: error.message });
+    }
+};
 
-    const result = await scapper.latest(req.params.page)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.header("Content-Type", 'application/json');
-    res.send(JSON.stringify(result, null, 4))
-})
+app.get('/api/latest/:page', handleScraperEndpoint(scapper.latest));
 
-app.get('/api/all/:page', async (req, res) => {
+app.get('/api/all/:page', handleScraperEndpoint(scapper.all));
 
-    const result = await scapper.all(req.params.page)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 's-maxage=43200');
-    res.header("Content-Type", 'application/json');
-    res.send(JSON.stringify(result, null, 4))
-})
+app.get('/api/info/:slug', handleScraperEndpoint(scapper.info));
 
-app.get('/api/info/:slug', async (req, res) => {
+app.get('/api/chapter/:manga/:chapter', handleScraperEndpoint((manga, chapter) => scapper.chapter(manga, chapter)));
 
-    const result = await scapper.info(req.params.slug)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.header("Content-Type", 'application/json');
-    res.send(JSON.stringify(result, null, 4))
-})
-
-app.get('/api/chapter/:manga/:chapter', async (req, res) => {
-
-    const result = await scapper.chapter(req.params.manga,req.params.chapter)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 's-maxage=43200');
-    res.header("Content-Type", 'application/json');
-    res.send(JSON.stringify(result, null, 4))
-})
-
+// --- ENDPOINT IMAGE PROXY (Sudah Optimal) ---
 app.get('/api/image-proxy', async (req, res) => {
     const imageUrl = req.query.url; 
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
+    
+    // Perbaikan: Hapus res.setHeader('Access-Control-Allow-Origin', '*'); karena sudah ada app.use(cors())
 
     if (!imageUrl) {
         return res.status(400).json({ error: 'Image URL is missing' });
@@ -61,7 +49,6 @@ app.get('/api/image-proxy', async (req, res) => {
 
     try {
         const REFERER_URL = 'https://hiperdex.com/manga/my-new-family-treats-me-well-new/chapter-90/'; 
-        
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             headers: {
@@ -75,9 +62,11 @@ app.get('/api/image-proxy', async (req, res) => {
         
         const contentType = response.headers['content-type'];
         const imageBuffer = response.data; 
+
         if (!contentType || !contentType.startsWith('image/')) {
             return res.status(403).json({ error: 'Blocked: Target did not return a valid image type.' });
         }
+
         const MAX_WIDTH = 1200;
         const processedBuffer = await sharp(imageBuffer)
             .resize({ 
@@ -97,10 +86,3 @@ app.get('/api/image-proxy', async (req, res) => {
 });
 
 module.exports = app;
-
-
-
-
-
-
-
