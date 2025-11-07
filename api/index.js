@@ -60,22 +60,18 @@ app.get('/api/image-proxy', async (req, res) => {
     }
 
     try {
-        // --- 1. MENGATASI BLOKIR ---
-        // Menambahkan User-Agent dan Referer
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-                'Referer': 'https://hiperdex.com/',
-                'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36', 
+                'Referer': 'https://hiperdex.com/', 
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
                 'Host': 'i1.r2d2storage.com',
-                'Connection': 'keep-alive'
+                'Connection': 'keep-alive' 
             }
         });
-        
+             
         const contentType = response.headers['content-type'];
 
         // --- 2. VERIFIKASI KONTEN ---
@@ -114,5 +110,6 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
 
