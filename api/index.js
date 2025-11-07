@@ -77,26 +77,38 @@ app.get('/api/image-proxy', async (req, res) => {
     const inputBuffer = Buffer.from(response.data);
 
     // ✅ Resize untuk mencegah WebGL crash
-    const processedBuffer = await sharp(inputBuffer)
-      .resize({
-        width: 720,        // lebar default komik
-        height: 3500,      // ↓ Batas tinggi aman (kunci fix WebGL!)
-        fit: "inside",
-        withoutEnlargement: true
-      })
-      .jpeg({ quality: 85 })
-      .toBuffer();
+    const processed = sharp(inputBuffer)
+  .resize({
+    width: 720,
+    withoutEnlargement: true
+  });
 
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "public, max-age=86400");
-    res.setHeader("Content-Type", "image/jpeg");
-    return res.status(200).send(processedBuffer);
+const metadata = await processed.metadata();
 
-  } catch (err) {
-    console.error("Proxy Error:", err.message);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    return res.status(404).json({ error: "Failed to fetch or process image." });
-  }
+// Tinggi maksimal per segmen
+const MAX_SEGMENT_HEIGHT = 1200;
+
+const segments = Math.ceil(metadata.height / MAX_SEGMENT_HEIGHT);
+
+let outputImages = [];
+
+for (let i = 0; i < segments; i++) {
+  const top = i * MAX_SEGMENT_HEIGHT;
+  const height = Math.min(MAX_SEGMENT_HEIGHT, metadata.height - top);
+
+  const segmentBuffer = await processed
+    .extract({ left: 0, top, width: metadata.width, height })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+
+  outputImages.push(segmentBuffer.toString("base64"));
+}
+
+res.setHeader("Access-Control-Allow-Origin", "*");
+return res.json({
+  type: "split",
+  count: segments,
+  images: outputImages
 });
 // === AKHIR PERBAIKAN ENDPOINT IMAGE PROXY ===
 
@@ -106,6 +118,7 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
 
 
 
