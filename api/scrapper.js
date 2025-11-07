@@ -91,123 +91,155 @@ async function chaptersList(url){
 }
 
 // --- Fungsi all ---
+// --- Fungsi all yang Dikoreksi Selektor (Mengatasi Data Kosong) ---
 async function all(page) {
 
-    let m_list = []
+    let m_list = []
 
-    try{
-        // Menerapkan axiosConfig
-        res = await axios.get(`https://hiperdex.com/mangalist/page/${page}`, axiosConfig)
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    try{
+        // Tetap menggunakan axiosConfig untuk 403
+        // Menggunakan mangalist/page/ (sesuai URL Anda)
+        res = await axios.get(`https://hiperdex.com/mangalist/page/${page}`, axiosConfig) 
+        const body = await res.data;
+        const $ = cheerio.load(body)
 
-        let p_title = $('.c-blog__heading h1').text().trim()
+        // Judul halaman
+        let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-2').each((index, element) => {
+        // Selektor UTAMA yang diperbaiki untuk list/archive page
+        // Menggunakan selector yang lebih andal: .post-listing .post-item
+        $('.post-listing .post-item').each((index, element) => { 
 
-                $elements = $(element)
-                // Perbaikan: Menambahkan fallback data-src
-                image = $elements.find('.page-item-detail').find('img').attr('src') || $elements.find('.page-item-detail').find('img').attr('data-src')
-                url = $elements.find('.page-item-detail').find('a').attr('href')
-                title = $elements.find('.page-item-detail .post-title').find('h3').text().trim()
-                rating = $elements.find('.total_votes').text().trim()
+            $elements = $(element)
+            
+            // Selektor Gambar yang Diperbaiki (Menggunakan fallback data-src)
+            let image = $elements.find('.post-thumbnail img').attr('src') || $elements.find('.post-thumbnail img').attr('data-src')
 
-                chapter = $elements.find('.list-chapter .chapter-item')
+            // Selektor URL dan Judul
+            let url = $elements.find('.post-title a').attr('href')
+            let title = $elements.find('.post-title a').text().trim() 
+            // Ambil rating jika ada di post-item
+            let rating = $elements.find('.total_votes').text().trim() 
 
-                let chapters = []
-                
-                $(chapter).each((i,e)=>{
+            // Selector chapter di halaman utama biasanya menunjuk ke chapter terakhir
+            let chapterItems = $elements.find('.post-latest-chapter')
+            
+            let chapters = []
+            
+            // Looping untuk chapter (hanya akan mengisi chapter terakhir)
+            $(chapterItems).each((i,e)=>{
 
-                    let c_title = $(e).find('a').text().trim()
-                    let c_url = $(e).find('a').attr('href')
-                    let c_date = $(e).find('.post-on').text().trim()
-                    let status = $(e).find('.post-on a').attr('title')
+                let c_title = $(e).find('a').text().trim()
+                let c_url = $(e).find('a').attr('href')
+                let c_date = '' 
+                let status = '' 
 
-                    chapters.push({
-                        'c_title': c_title,
-                        'c_url': c_url,
-                        'c_date': c_date,
-                        'status': status
-                    })
-                })
+                chapters.push({
+                    'c_title': c_title,
+                    'c_url': c_url,
+                    'c_date': c_date,
+                    'status': status
+                })
+            })
 
-                m_list.push({
-                    'title': title,
-                    'rating': rating,
-                    'image': image,
-                    'url': url,
-                    'chapters': chapters
-                })     
-        })
+            m_list.push({
+                'title': title,
+                'rating': rating,
+                'image': image,
+                'url': url,
+                'chapters': chapters
+            })     
+        })
 
-        let current = $('.current').text()
-        
-        let last_page = $('.last').attr('href')
-        !last_page?last_page=current:last_page
+        // Logika Paginasi (Asli Anda)
+        let current = $('.current').text()
+        let last_page = $('.last').attr('href')
+        !last_page?last_page=current:last_page
 
-         return await ({
-            'p_title': p_title,
-            'list': m_list,
-            'current_page': parseInt(current),
-            // Menambahkan regEx untuk memastikan hanya angka yang diambil dari URL
-            'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
-        })
-    } catch (error) {
-         console.error(`Scraper Error (all): ${error.message}`);
-        return await ({'error': 'Sorry dude, an error occured! No Latest!'})
-     }
+        return {
+            'p_title': p_title,
+            'list': m_list,
+            'current_page': parseInt(current) || 1,
+            'last_page': parseInt(last_page.replace(/[^0-9]/g, '')) || 1
+        }
+    } catch (error) {
+        console.error(`Scraper Error (all): ${error.message}`);
+        return {'error': `Sorry dude, an error occured! No List! Details: ${error.message}`}
+    }
 
 }
 
-// --- Fungsi latest ---
+// --- Fungsi latest yang Dikoreksi Selektor ---
 async function latest(page) {
 
-    let m_list = []
+    let m_list = []
 
-    try{
-        // Menerapkan axiosConfig
-        res = await axios.get(`https://hiperdex.com/page/${page}`, axiosConfig)
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    try{
+        // Tetap menggunakan axiosConfig untuk 403
+        res = await axios.get(`https://hiperdex.com/page/${page}`, axiosConfig) 
+        const body = await res.data;
+        const $ = cheerio.load(body)
 
-        let p_title = $('.c-blog__heading h1').text().trim()
+        let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-2').each((index, element) => {
+        // Selektor UTAMA yang diperbaiki
+        $('.post-listing .post-item').each((index, element) => {
 
-                $elements = $(element)
-                // Perbaikan: Menambahkan fallback data-src
-                image = $elements.find('.page-item-detail').find('img').attr('src') || $elements.find('.page-item-detail').find('img').attr('data-src')
-                url = $elements.find('.page-item-detail').find('a').attr('href')
-                title = $elements.find('.page-item-detail .post-title').find('h3').text().trim()
-                rating = $elements.find('.total_votes').text().trim()
+            $elements = $(element)
+            
+            // Selektor Gambar yang Diperbaiki
+            let image = $elements.find('.post-thumbnail img').attr('src') || $elements.find('.post-thumbnail img').attr('data-src')
 
-                chapter = $elements.find('.list-chapter .chapter-item')
+            // Selektor URL dan Judul yang Diperbaiki
+            let url = $elements.find('.post-title a').attr('href')
+            let title = $elements.find('.post-title a').text().trim() 
+            let rating = $elements.find('.total_votes').text().trim() 
 
-                let chapters = []
-                
-                $(chapter).each((i,e)=>{
+            // Selector chapter di halaman utama biasanya lebih ringkas
+            let chapterItems = $elements.find('.post-latest-chapter') // Hanya ambil chapter terakhir yang ditampilkan
+            
+            let chapters = []
+            
+            $(chapterItems).each((i,e)=>{
 
-                    let c_title = $(e).find('a').text().trim()
-                    let c_url = $(e).find('a').attr('href')
-                    let c_date = $(e).find('.post-on').text().trim()
-                    let status = $(e).find('.post-on a').attr('title')
+                let c_title = $(e).find('a').text().trim()
+                let c_url = $(e).find('a').attr('href')
+                let c_date = '' // Biasanya tidak ada tanggal di sini
+                let status = '' 
 
-                    chapters.push({
-                        'c_title': c_title,
-                        'c_url': c_url,
-                        'c_date': c_date,
-                        'status': status
-                    })
-                })
+                chapters.push({
+                    'c_title': c_title,
+                    'c_url': c_url,
+                    'c_date': c_date,
+                    'status': status
+                })
+            })
 
-                m_list.push({
-                    'title': title,
-                    'rating': rating,
-                    'image': image,
-                    'url': url,
-                    'chapters': chapters
-                })     
-        })
+            m_list.push({
+                'title': title,
+                'rating': rating,
+                'image': image,
+                'url': url,
+                'chapters': chapters
+            })     
+        })
+
+        let current = $('.current').text()
+        let last_page = $('.last').attr('href')
+        !last_page?last_page=current:last_page
+
+        return {
+            'p_title': p_title,
+            'list': m_list,
+            'current_page': parseInt(current) || 1,
+            'last_page': parseInt(last_page.replace(/[^0-9]/g, '')) || 1
+        }
+    } catch (error) {
+        console.error(`Scraper Error (latest): ${error.message}`);
+        return {'error': `Sorry dude, an error occured! No Latest! Details: ${error.message}`}
+    }
+
+}
 
         let current = $('.current').text()
         
@@ -283,3 +315,4 @@ module.exports = {
     info,
     chapter
 }
+
