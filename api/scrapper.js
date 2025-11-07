@@ -201,32 +201,37 @@ async function latest(page) {
 }
 
 
-async function chapter(manga,chapter) {
+async function chapter(manga, chapter) {
 
     let ch_list = []
 
     try{
-        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
+        // Tetap menggunakan axiosConfig untuk 403
+        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        $('.read-container img').each((index, element) => {
-
-                $elements = $(element)
-                image = $elements.attr('src').trim()
-
-                ch_list.push({'ch': image})     
+        // Perbaikan Selektor Gambar: 
+        // Mencari semua <img> di dalam .read-container
+        $('.read-container img').each((index, element) => { 
+            const $elements = $(element)
+            
+            // Mencoba beberapa atribut yang mungkin berisi URL (src, data-src, data-lazy-src)
+            let image = $elements.attr('src') || $elements.attr('data-src') || $elements.attr('data-lazy-src');
+            
+            // Pastikan URL gambar mengandung domain
+            if (image && image.trim().startsWith('http')) {
+                 ch_list.push({'ch': image.trim()})     
+            }
         })
-
+        
+        // ... (Logika metadata lainnya)
         let manga_title = $('#chapter-heading').text().trim()
         let manga_url = $('.breadcrumb > li:nth-child(2) > a:nth-child(1)').attr('href')
-        
         let current_ch = $('.active').text().trim()
-        
         let prev = $('.prev_page').attr('href')
         let next = $('.next_page').attr('href')
         
-
         return await ({
             'manga': manga_title,
             'manga_url':manga_url,
@@ -238,7 +243,8 @@ async function chapter(manga,chapter) {
             }]
         })
      } catch (error) {
-        return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
+         console.error(`Scraper Error (chapter): ${error.message}`);
+         return await ({'error': 'Sorry dude, an error occured! Failed to scrape chapter images!'})
      }
 
 }
@@ -249,3 +255,4 @@ module.exports = {
     info,
     chapter
 }
+
