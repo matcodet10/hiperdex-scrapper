@@ -69,56 +69,35 @@ app.get('/api/image-proxy', async (req, res) => {
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             headers: {
-                // User-Agent yang Anda dapatkan (Wajib Mobile):
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36', 
-                
-                // Referer Halaman Chapter (Wajib Spesifik):
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36',
                 'Referer': 'https://hiperdex.com/',
-                
-                // Header-header Mobile Khas Chrome (Sangat Penting):
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br', // Tambahkan kompresi
+                'Accept-Encoding': 'gzip, deflate, br',
                 'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
-                'sec-ch-ua-mobile': '?1', // Sinyal Chrome bahwa ini adalah perangkat Mobile
-                'sec-ch-ua-platform': '"Android"', // Sinyal Chrome bahwa OS adalah Android
-
-                // Header Dasar
-                'Host': 'i1.r2d2storage.com',
-                'Connection': 'keep-alive' 
+                'sec-ch-ua-mobile': '?1',
+                'sec-ch-ua-platform': '"Android"',
             }
         });
-        // ...
-             
-        const contentType = response.headers['content-type'];
 
-        // --- 2. VERIFIKASI KONTEN ---
-        // Memastikan respons dari situs target benar-benar adalah gambar
+        const contentType = response.headers['content-type'];
         if (!contentType || !contentType.startsWith('image/')) {
-            console.error('Target site returned non-image content:', contentType);
-            res.setHeader('Access-Control-Allow-Origin', '*'); 
             return res.status(403).json({ error: 'Blocked: Target did not return a valid image type.' });
         }
 
-        // Set Header Sukses
-        res.setHeader('Access-Control-Allow-Origin', '*'); 
-        res.setHeader('Content-Type', contentType); 
-        
-        // --- 3. MENGATASI CACHING (304) ---
-        // Ini memaksa klien untuk selalu meminta gambar yang baru (200 OK)
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        
-        // Kirim data gambar
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Headers', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET');
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
         res.status(200).send(response.data);
 
     } catch (error) {
-        // Gunakan error.message untuk logging yang lebih bersih
         console.error('Proxy Fetch Error:', error.message); 
         res.setHeader('Access-Control-Allow-Origin', '*'); 
         res.status(404).json({ error: 'Failed to fetch image from source.' });
     }
 });
+
 // === AKHIR PERBAIKAN ENDPOINT IMAGE PROXY ===
 
 
@@ -127,3 +106,4 @@ app.get('/api/image-proxy', async (req, res) => {
     //console.log(`Listening to port ${port}`)
 
 module.exports = app;
+
