@@ -206,20 +206,35 @@ async function chapter(manga,chapter) {
     let images = [] 
 
     try{
-        res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`)
+        // 1. Ambil halaman chapter
+        const url = `https://hiperdex.com/manga/${manga}/${chapter}`;
+        const res = await axios.get(url, {
+             // Menambahkan header dasar untuk menghindari deteksi bot
+             headers: {
+                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                 'Referer': url
+             }
+        });
         const body = await res.data;
         const $ = cheerio.load(body)
 
+        // 2. Loop melalui semua tag img di read-container
         $('.read-container img').each((index, element) => {
 
             $elements = $(element)
-            const image_url = $elements.attr('src')?.trim();
-
-            // 1. Coba ambil dari atribut standar
-            let original_width = parseInt($elements.attr('width')) || 0;
-            let original_height = parseInt($elements.attr('height')) || 0;
             
-            // 2. Jika 0, coba ambil dari atribut data-width/data-height (Sering digunakan di web modern)
+            // Coba ambil URL dari 'data-src' (umum untuk lazy loading), jika tidak ada, ambil dari 'src'
+            const image_url = $elements.attr('data-src')?.trim() || $elements.attr('src')?.trim();
+            
+            // --- LOGIKA PENGAMBILAN DIMENSI YANG LEBIH LUAS ---
+            let original_width = 0;
+            let original_height = 0;
+
+            // Coba dari atribut 'width'/'height' standar
+            original_width = parseInt($elements.attr('width')) || 0;
+            original_height = parseInt($elements.attr('height')) || 0;
+
+            // Jika masih 0, coba dari data-width / data-height (alternatif populer)
             if (original_width === 0) {
                  original_width = parseInt($elements.attr('data-width')) || 0;
             }
@@ -227,15 +242,16 @@ async function chapter(manga,chapter) {
                  original_height = parseInt($elements.attr('data-height')) || 0;
             }
             
-            // 3. Jika masih 0, coba ambil dari atribut data-original
-            if (original_width === 0) {
-                 original_width = parseInt($elements.attr('data-original-width')) || 0;
+            // Fallback: Jika gambar sangat panjang, beri nilai default aman untuk di-tiling
+            // Jika width > 0 tapi height 0, set height menjadi 50000 (maksimum perkiraan)
+            if (original_width > 0 && original_height === 0) {
+                original_height = 50000;
+            } else if (original_width === 0) {
+                // Jika width juga 0, set default width yang sering digunakan (misal 800)
+                original_width = 800;
+                original_height = 50000;
             }
-            if (original_height === 0) {
-                 original_height = parseInt($elements.attr('data-original-height')) || 0;
-            }
-            
-            // ---------------------------------------------
+            // ---------------------------------------------------
             
             if (image_url) {
                 images.push({
@@ -246,29 +262,26 @@ async function chapter(manga,chapter) {
             }
         })
 
-        // ... (bagian navigasi dan metadata lainnya tetap sama)
-
+        // 3. Metadata dan Navigasi (tetap sama)
         let manga_title = $('#chapter-heading').text().trim()
         let manga_url = $('.breadcrumb > li:nth-child(2) > a:nth-child(1)').attr('href')
-        
         let current_ch = $('.active').text().trim()
-        
         let prev = $('.prev_page').attr('href')
         let next = $('.next_page').attr('href')
-
+        
 
         return await ({
             'manga': manga_title,
             'manga_url': manga_url,
             'current_ch': current_ch,
-            'images': images, // Pastikan ini 'images' (bukan 'chapters')
+            'images': images, // Mengembalikan daftar gambar dengan dimensi
             'nav':[{
                 'prev': prev,
                 'next': next
             }]
         })
     } catch (error) {
-        // Logging error yang lebih baik untuk debugging di Vercel
+        // Logging error yang lebih baik
         console.error('Scrapper Chapter Error:', error.message); 
         return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
     }
@@ -280,4 +293,5 @@ module.exports = {
     info,
     chapter
 }
+
 
