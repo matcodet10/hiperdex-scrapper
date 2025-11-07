@@ -87,24 +87,26 @@ app.get('/api/image-proxy', async (req, res) => {
 
         // 4. Terapkan Cropping jika parameter valid
         if (!isNaN(crop_h) && crop_h > 0) {
-            // Hitung faktor skala
-            const scaleFactor = MAX_WIDTH / originalWidth;
-            
-            // Terapkan skala pada posisi Y dan Tinggi Potongan
-            const scaledCropY = Math.round(crop_y * scaleFactor);
-            const scaledCropH = Math.round(crop_h * scaleFactor);
 
-            if (scaledCropY >= 0 && scaledCropH > 0) {
-                imageProcessor = imageProcessor.extract({ 
-                    left: 0, 
-                    top: scaledCropY, 
-                    width: MAX_WIDTH, 
-                    height: scaledCropH 
-                });
-            } else {
-                 console.warn(`[Proxy Warning] Invalid crop parameters after scaling: Y=${scaledCropY}, H=${scaledCropH}. Skipping crop.`);
-            }
-        }
+    // Hitung faktor skala
+    const scaleFactor = MAX_WIDTH / originalWidth;
+    
+    // Terapkan skala pada posisi Y dan Tinggi Potongan
+    // PENTING: Gunakan parseInt() BUKAN Math.round()
+    const scaledCropY = parseInt(crop_y * scaleFactor);
+    const scaledCropH = parseInt(crop_h * scaleFactor);
+
+    if (scaledCropY >= 0 && scaledCropH > 0) {
+        imageProcessor = imageProcessor.extract({ 
+            left: 0, 
+            top: scaledCropY, 
+            width: MAX_WIDTH, 
+            height: scaledCropH 
+        });
+    } else {
+         console.warn(`[Proxy Warning] Invalid crop parameters after scaling: Y=${scaledCropY}, H=${scaledCropH}. Skipping crop.`);
+    }
+}
         
         // 5. Konversi dan kirim
         const processedBuffer = await imageProcessor.toFormat('jpeg').toBuffer(); // Default ke JPEG
@@ -128,4 +130,5 @@ app.listen(port, () => {
 
 // Jangan lupa menambahkan module.exports di akhir untuk Vercel
 module.exports = app;
+
 
