@@ -183,38 +183,53 @@ async function info(slug) {
 // =========================================
 // 4. CHAPTER (FULL FIXED)
 // =========================================
-async function chapter(chapterUrl) {
+async function chapter(manga, chapter) {
   try {
-    const res = await axios.get(chapterUrl, axiosConfig);
-    const $ = cheerio.load(res.data);
-    console.log("🔍 Fetching URL:", `${BASE_URL}/manga/${manga}/${chapter}`);
+    const BASE_URL = "https://manga18fx.com";
 
+    // Build URL secara aman
+    const url = `${BASE_URL}/manga/${manga}/${chapter}/`;
+
+    console.log("🔍 Fetching Chapter:", url);
+
+    const { data } = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+      }
+    });
+
+    const $ = cheerio.load(data);
+
+    // Manga Title
     const mangaTitle =
       $(".breadcrumb li:nth-child(3) a").text().trim() ||
       $(".post-title h1").text().trim();
 
+    // Manga URL
     const mangaUrl =
       $(".breadcrumb li:nth-child(3) a").attr("href") || null;
 
+    // Chapter Title
     const chapterTitle =
       $(".breadcrumb li:nth-child(4)").text().trim() ||
       $(".chapter-header h1").text().trim();
 
-    let images = [];
-
+    // Image Scraping
+    const images = [];
     $(".page-break img").each((i, el) => {
-      let src =
+      let img =
         $(el).attr("data-src") ||
         $(el).attr("src") ||
         $(el).attr("data-lazy-src");
+      
+      if (!img) return;
 
-      if (!src) return;
+      if (img.startsWith("//")) img = "https:" + img;
+      if (img.startsWith("/")) img = BASE_URL + img;
 
-      // Fix protocol
-      if (src.startsWith("//")) src = "https:" + src;
-      if (src.startsWith("/")) src = BASE_URL + src;
-
-      images.push(src);
+      images.push(img);
     });
 
     return {
@@ -222,12 +237,17 @@ async function chapter(chapterUrl) {
       manga_url: mangaUrl,
       current_ch: chapterTitle,
       images,
-      count: images.length,
+      count: images.length
     };
-  } catch (e) {
-    return { error: e.message };
+
+  } catch (err) {
+    return {
+      error: true,
+      message: err.message
+    };
   }
 }
+
 
 module.exports = {
   latest,
@@ -235,4 +255,5 @@ module.exports = {
   info,
   chapter,
 };
+
 
