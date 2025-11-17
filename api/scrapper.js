@@ -123,6 +123,7 @@ async function all(page) {
   } catch (e) {
     return { error: e.message };
   }
+}
 
 // =========================================
 // 3. INFO
@@ -259,6 +260,7 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
 
