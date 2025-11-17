@@ -1,11 +1,11 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
 
-// Konfigurasi Header untuk mengatasi pemblokiran anti-bot (Sangat Penting)
+// Konfigurasi Header Global (Sangat Penting untuk menghindari pemblokiran Anti-Bot)
 const axiosConfig = {
     headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Referer': 'https://hiperdex.com/' // Menambahkan Referer untuk Ajax/Post request
+        'Referer': 'https://hiperdex.com/' // Referer ditambahkan untuk Ajax/Post request
     }
 };
 
@@ -14,13 +14,12 @@ async function chaptersList(url){
     let ch_list = []
 
     try{
-        // Menggunakan axios.post dengan config
-        res = await axios.post(url, {}, axiosConfig) 
+        // PERBAIKAN: Menggunakan axios.post dengan config
+        res = await axios.post(url, {}, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
 
         $('.version-chap li').each((index, element) => {
-
             $elements = $(element)
             title = $elements.find('a').text().trim()
             url = $elements.find('a').attr('href')
@@ -31,7 +30,6 @@ async function chaptersList(url){
 
             ch_list.push(chapters)    
         })
-
         return await (ch_list)
     } catch(error) {
         // console.log(error); // Aktifkan ini untuk debugging
@@ -44,7 +42,7 @@ async function info(slug) {
     let genres = []
 
     try{
-        // Menggunakan axios.get dengan config
+        // PERBAIKAN: Menggunakan axios.get dengan config
         res = await axios.get(`https://hiperdex.com/manga/${slug}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
@@ -60,7 +58,6 @@ async function info(slug) {
             genres.push($(e).text().trim())
         })
 
-        // NOTE: Selektor posisi (nth-child) dipertahankan, tapi berisiko
         let other_name = $('div.post-content_item:nth-child(5) > div:nth-child(2)').text().trim()
         let status = $('div.post-content_item:nth-child(2) > div:nth-child(2)').text().trim()
         
@@ -83,7 +80,6 @@ async function info(slug) {
          // console.log(error); // Aktifkan ini untuk debugging
          return await ({'error': 'Sorry dude, an error occured! No Info!'})
      }
-
 }
 
 // --- Fungsi all(page) (Daftar A-Z) ---
@@ -92,28 +88,22 @@ async function all(page) {
     let m_list = []
 
     try{
-        // Perbaikan URL sudah BENAR: /mangalist/?start=${page}
+        // PERBAIKAN: Menggunakan axios.get dengan config
         res = await axios.get(`https://hiperdex.com/mangalist/?start=${page}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        // PERBAIKAN SELEKTOR UTAMA: Kembali ke '.page-listing-item' (lebih aman)
+        // PERBAIKAN SELEKTOR UTAMA: Menggunakan '.page-listing-item' (lebih stabil)
         $('#loop-content .page-listing-item').each((index, element) => {
 
             $elements = $(element)
             
-            // PERBAIKAN SELEKTOR INTERNAL: Lebih spesifik berdasarkan HTML terakhir
-            // $elements mengacu pada .page-listing-item
-
-            // Ambil URL/Image dari .item-thumb
+            // PERBAIKAN SELEKTOR INTERNAL: Menggunakan selektor spesifik yang telah dikonfirmasi
             image = $elements.find('.item-thumb img').attr('src')
             url = $elements.find('.item-thumb a').attr('href')
-            
-            // Ambil Title dari <a> di dalam <h3> di dalam .post-title
             title = $elements.find('.post-title h3 a').text().trim() 
-            
             rating = $elements.find('.total_votes').text().trim()
 
             chapter = $elements.find('.list-chapter .chapter-item')
@@ -167,19 +157,19 @@ async function latest(page) {
     let m_list = []
 
     try{
-        // URL terbaru masih diasumsikan menggunakan /page/
+        // PERBAIKAN: Menggunakan axios.get dengan config
         res = await axios.get(`https://hiperdex.com/page/${page}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        // PERBAIKAN SELEKTOR UTAMA: Kembali ke '.page-listing-item' (lebih aman)
+        // PERBAIKAN SELEKTOR UTAMA: Menggunakan '.page-listing-item' (lebih stabil)
         $('#loop-content .page-listing-item').each((index, element) => {
 
             $elements = $(element)
             
-            // PERBAIKAN SELEKTOR INTERNAL: Sama dengan all(page)
+            // PERBAIKAN SELEKTOR INTERNAL: Menggunakan selektor spesifik yang telah dikonfirmasi
             image = $elements.find('.item-thumb img').attr('src')
             url = $elements.find('.item-thumb a').attr('href')
             title = $elements.find('.post-title h3 a').text().trim() 
@@ -236,7 +226,7 @@ async function chapter(manga,chapter) {
     let ch_list = []
 
     try{
-        // Menggunakan axios.get dengan config
+        // PERBAIKAN: Menggunakan axios.get dengan config
         res = await axios.get(`https://hiperdex.com/manga/${manga}/${chapter}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
@@ -244,7 +234,6 @@ async function chapter(manga,chapter) {
         $('.read-container img').each((index, element) => {
 
             $elements = $(element)
-            // Mengambil src dari semua tag <img> di dalam .read-container
             image = $elements.attr('src').trim() 
 
             ch_list.push({'ch': image})    
