@@ -200,8 +200,8 @@ async function chapter(manga, chapter) {
     const url = `${BASE_URL}/manga/${manga}/${chapter}`;
     const res = await axios.get(url, { headers: axiosConfig.headers });
 
-    console.log("DEBUG CHAPTER HTML:", res.data);  // debug
-
+    console.log("DEBUG CHAPTER HTML:", res.data);
+    console.log(res.data);
     const $ = cheerio.load(res.data);
 
     const selectors = [
@@ -257,6 +257,7 @@ module.exports = {
     info,
     chapter
 };
+
 
 
 
