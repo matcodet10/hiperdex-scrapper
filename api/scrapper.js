@@ -1,17 +1,20 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const IMAGE_PROXY_URL = 'https://image-proxy.fuadkhalish098.workers.dev/'; 
 
-const BASE_URL = 'https://manga18fx.com';
+// 🔥 WAJIB DIGANTI: Domain Cloudflare Worker Anda
+const PROXY_WORKER_DOMAIN = 'https://image-proxy.fuadkhalish098.workers.dev/'; 
+const BASE_URL = 'https://manga18fx.com'; // Hanya untuk Referer/Logika
 
+// Hapus BASE_URL di sini, Axios sekarang memanggil Worker
 const axiosConfig = {
     headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': BASE_URL,
+        'Referer': BASE_URL, // Tetap gunakan Referer situs sumber
     },
-    timeout: 8000 
+    timeout: 10000 
 };
 
+// ... (Fungsi Pembantu getSlug dan getProxyUrl tetap sama) ...
 const getSlug = (url) => {
     try {
         if (!url) return '';
@@ -23,27 +26,34 @@ const getSlug = (url) => {
 };
 
 const getProxyUrl = (imageUrl) => {
+    // getProxyUrl sekarang memanggil Worker untuk gambar
     if (!imageUrl || typeof imageUrl !== 'string') return '';
-    return IMAGE_PROXY_URL + encodeURIComponent(imageUrl);
+    return PROXY_WORKER_DOMAIN + '/img-proxy?url=' + encodeURIComponent(imageUrl);
 };
 
+// --- Fungsi Utama: Latest dan All ---
 
 const listScraper = async (endpoint, page) => {
-    const url = endpoint === 'latest' ? `${BASE_URL}/page/${page}` : `${BASE_URL}/manga-list/${page}`; 
-    
+    // Worker akan menangani URL path yang benar ke Manga18fx
+    const path = endpoint === 'latest' ? `/page/${page}` : `/manga-list/${page}`; 
+    const url = PROXY_WORKER_DOMAIN + path; // <--- PENTING: Panggil Worker Anda
+
     try {
         const res = await axios.get(url, axiosConfig);
 
-        if (!res.data || res.data.length < 1000 || res.data.includes("challenge page")) {
-            console.warn(`[SCRAPER WARNING] Suspicious response from ${url}`);
-            return { p_title: 'Error: Anti-Bot/Empty Response', list: [] };
+        // Worker harus mengembalikan HTML
+        if (!res.data || res.data.length < 1000 || res.data.includes("Anti-Bot Detected")) {
+            console.warn(`[SCRAPER WARNING] Worker returned Anti-Bot/Empty response for ${url}`);
+            return { p_title: 'Error: Anti-Bot Detected by Worker', list: [] };
         }
         
         const $ = cheerio.load(res.data);
         const list = [];
         
+        // Coba scraping dengan selector yang sama
         $('.bsx-item').each((i, el) => {
             const $el = $(el);
+            
             const itemUrl = $el.find('a').attr('href') || '';
             const image = $el.find('.limit img').attr('src') || '';
             
@@ -59,21 +69,23 @@ const listScraper = async (endpoint, page) => {
         return { p_title: 'Latest Updates', list };
     } catch (error) {
         console.error(`Critical Scraping Error in ${endpoint}():`, error.message);
-        // Mengembalikan list kosong, bukan melempar exception 500
-        return { p_title: 'Fatal Error Scraping', list: [] }; 
+        return { p_title: 'Fatal Error Scraping (Network/Worker Down)', list: [] }; 
     }
 };
 
 const latest = (page) => listScraper('latest', page);
 const all = (page) => listScraper('all', page);
 
+
+// --- Fungsi Utama: Manhwa Info (Detail) ---
 const info = async (slug) => {
-    const url = `${BASE_URL}/manga/${slug}`;
+    const path = `/manga/${slug}`;
+    const url = PROXY_WORKER_DOMAIN + path; // <--- PENTING: Panggil Worker Anda
     try {
         const res = await axios.get(url, axiosConfig);
         
-        if (!res.data || res.data.length < 1000 || res.data.includes("challenge page")) {
-            return { error: 'Failed to load info: Anti-Bot/Empty Response' };
+        if (!res.data || res.data.length < 1000) {
+            return { error: 'Failed to load info: Worker Anti-Bot/Empty Response' };
         }
 
         const $ = cheerio.load(res.data);
@@ -108,8 +120,10 @@ const info = async (slug) => {
     }
 }
 
+// --- Fungsi Utama: Chapter Images ---
 const chapter = async (mangaSlug, chapterSlug) => {
-    const url = `${BASE_URL}/manga/${mangaSlug}/${chapterSlug}`;
+    const path = `/manga/${mangaSlug}/${chapterSlug}`;
+    const url = PROXY_WORKER_DOMAIN + path; // <--- PENTING: Panggil Worker Anda
     
     try {
         const res = await axios.get(url, axiosConfig);
@@ -121,7 +135,7 @@ const chapter = async (mangaSlug, chapterSlug) => {
 
             if (imageSrc) {
                 chapters.push({
-                    ch: getProxyUrl(imageSrc), 
+                    ch: getProxyUrl(imageSrc), // Menggunakan Proxy Worker
                 });
             }
         });
