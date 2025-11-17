@@ -8,264 +8,254 @@ const axiosConfig = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Language': 'en-US,en;q=0.9',
         'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
         'Referer': 'https://manga18fx.com/'
     }
 };
 
 const BASE_URL = 'https://manga18fx.com';
 
-// --- 1. FUNGSI latest(page) (UPDATE TERBARU) ---
+// ======================================================
+// 1. LATEST
+// ======================================================
 async function latest(page) {
-    let m_list = []
-    try{
-        res = await axios.get(`${BASE_URL}/page/${page}`, axiosConfig) 
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    let m_list = [];
 
-        const listContainer = $('.listupd'); 
-        
-        listContainer.find('.bsx-item').each((index, element) => { 
-            $elements = $(element)
-            
-            url = $elements.find('a').attr('href')
-            image = $elements.find('img').attr('src')
-            title = $elements.find('a').attr('title') 
-            rating = $elements.find('.numscore').text().trim() 
+    try {
+        const res = await axios.get(`${BASE_URL}/page/${page}`, { headers: axiosConfig.headers });
+        const body = res.data;
+        const $ = cheerio.load(body);
 
-            chapter_items = $elements.find('.epxs a'); 
+        const listContainer = $('.listupd');
 
-            let chapters = []
-            
-            $(chapter_items).each((i,e)=>{
-                let c_title = $(e).text().trim()
-                let c_url = $(e).attr('href')
-                let c_date = $(e).parent().find('span').text().trim()
+        listContainer.find('.bsx-item').each((index, element) => {
+            const $elements = $(element);
 
-                chapters.push({ 'c_title': c_title, 'c_url': c_url, 'c_date': c_date, 'status': null })
-            })
+            const url = $elements.find('a').attr('href');
+            const image = $elements.find('img').attr('src');
+            const title = $elements.find('a').attr('title');
+            const rating = $elements.find('.numscore').text().trim();
 
-            m_list.push({'title': title, 'rating': rating, 'image': image, 'url': url, 'chapters': chapters})    
-        })
+            const chapter_items = $elements.find('.epxs a');
+            let chapters = [];
 
-        let current = $('.pagination .current').text()
-        let last_page_link = $('.pagination .last a').attr('href')
-        
+            chapter_items.each((i, e) => {
+                const c_title = $(e).text().trim();
+                const c_url = $(e).attr('href');
+                const c_date = $(e).parent().find('span').text().trim();
+
+                chapters.push({ c_title, c_url, c_date, status: null });
+            });
+
+            m_list.push({ title, rating, image, url, chapters });
+        });
+
+        const current = parseInt($('.pagination .current').text() || 1);
         let last_page = current;
+
+        const last_page_link = $('.pagination .last a').attr('href');
         if (last_page_link) {
             const match = last_page_link.match(/page\/(\d+)/);
-            if (match) {
-                last_page = match[1];
-            }
+            if (match) last_page = parseInt(match[1]);
         }
-        
-         return await ({
-             'p_title': 'Latest Updates',
-             'list': m_list,
-             'current_page': parseInt(current),
-             'last_page': parseInt(last_page)
-         })
-     } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Latest!'})
-     }
+
+        return {
+            p_title: 'Latest Updates',
+            list: m_list,
+            current_page: current,
+            last_page: last_page
+        };
+
+    } catch (error) {
+        return { error: error.message };
+    }
 }
 
-// --- 2. FUNGSI all(page) (DAFTAR GENRE/KATEGORI) ---
+
+// ======================================================
+// 2. ALL (genre list)
+// ======================================================
 async function all(page) {
-    let m_list = []
-    try{
-        // URL Genre/Kategori
-        res = await axios.get(`${BASE_URL}/manga-genre/manhwa/${page}`, axiosConfig) 
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    let m_list = [];
 
-        const listContainer = $('.listupd'); 
-        
-        // Selektor sama dengan latest
-        listContainer.find('.bsx-item').each((index, element) => { 
-            $elements = $(element)
-            
-            url = $elements.find('a').attr('href')
-            image = $elements.find('img').attr('src')
-            title = $elements.find('a').attr('title') 
-            rating = $elements.find('.numscore').text().trim() 
+    try {
+        const res = await axios.get(`${BASE_URL}/manga-genre/manhwa/${page}`, { headers: axiosConfig.headers });
+        const body = res.data;
+        const $ = cheerio.load(body);
 
-            chapter_items = $elements.find('.epxs a'); 
+        const listContainer = $('.listupd');
 
-            let chapters = []
-            
-            $(chapter_items).each((i,e)=>{
-                let c_title = $(e).text().trim()
-                let c_url = $(e).attr('href')
-                let c_date = $(e).parent().find('span').text().trim()
+        listContainer.find('.bsx-item').each((index, element) => {
+            const $elements = $(element);
 
-                chapters.push({'c_title': c_title, 'c_url': c_url, 'c_date': c_date, 'status': null})
-            })
+            const url = $elements.find('a').attr('href');
+            const image = $elements.find('img').attr('src');
+            const title = $elements.find('a').attr('title');
+            const rating = $elements.find('.numscore').text().trim();
 
-            m_list.push({'title': title, 'rating': rating, 'image': image, 'url': url, 'chapters': chapters})    
-        })
+            const chapter_items = $elements.find('.epxs a');
+            let chapters = [];
 
-        // Logika Pagination sama
-        let current = $('.pagination .current').text()
-        let last_page_link = $('.pagination .last a').attr('href')
-        
+            chapter_items.each((i, e) => {
+                const c_title = $(e).text().trim();
+                const c_url = $(e).attr('href');
+                const c_date = $(e).parent().find('span').text().trim();
+
+                chapters.push({ c_title, c_url, c_date, status: null });
+            });
+
+            m_list.push({ title, rating, image, url, chapters });
+        });
+
+        const current = parseInt($('.pagination .current').text() || 1);
         let last_page = current;
+
+        const last_page_link = $('.pagination .last a').attr('href');
         if (last_page_link) {
-            const match = last_page_link.match(/\/(\d+)\/?$/); 
-            if (match) {
-                last_page = match[1];
-            }
+            const match = last_page_link.match(/\/(\d+)\/?$/);
+            if (match) last_page = parseInt(match[1]);
         }
-        
-         return await ({
-             'p_title': 'Manhwa Genre List',
-             'list': m_list,
-             'current_page': parseInt(current),
-             'last_page': parseInt(last_page)
-         })
-     } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Genre List!'})
-     }
+
+        return {
+            p_title: 'Manhwa Genre List',
+            list: m_list,
+            current_page: current,
+            last_page: last_page
+        };
+
+    } catch (error) {
+        return { error: error.message };
+    }
 }
 
-// --- 3. FUNGSI info(slug) (DETAIL MANHWA) ---
+
+// ======================================================
+// 3. INFO (detail manhwa)
+// ======================================================
 async function info(slug) {
     let genres = [];
     let ch_list = [];
 
-    try{
-        res = await axios.get(`${BASE_URL}/manga/${slug}`, axiosConfig);
-        const body = await res.data;
+    try {
+        const res = await axios.get(`${BASE_URL}/manga/${slug}`, { headers: axiosConfig.headers });
+        const body = res.data;
         const $ = cheerio.load(body);
 
-        // --- DATA DETAIL MANGA ---
-        let manhwa_title = $('.post-title h1').text().trim();
-        let poster = $('.summary_image img').attr('src'); 
-        
-        let author = $('.author-content a').text().trim();
-        let artist = $('.artist-content a').text().trim();
+        const manhwa_title = $('.post-title h1').text().trim();
+        const poster = $('.summary_image img').attr('src');
 
-        let other_name_raw = $('.summary_content .post-content_item:contains("Alternative")').text();
-        let other_name = other_name_raw.replace(/Alternative:/g, '').trim();
+        const author = $('.author-content a').text().trim();
+        const artist = $('.artist-content a').text().trim();
 
-        let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); 
+        const other_name_raw = $('.summary_content .post-content_item:contains("Alternative")').text();
+        const other_name = other_name_raw.replace(/Alternative:/g, '').trim();
 
-        // --- DESKRIPSI (Mengambil teks dari kontainer deskripsi dan membersihkan label "SUMMARY") ---
-        let description = $('#panel-story-description').text().trim(); 
+        const status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim();
+
+        let description = $('#panel-story-description').text().trim();
         if (description.startsWith('SUMMARY')) {
             description = description.replace('SUMMARY', '').trim();
         }
 
-        // --- GENRES ---
-        let genres_e = $('.genres-content a');
-        $(genres_e).each((i,e)=>{
+        $('.genres-content a').each((i, e) => {
             genres.push($(e).text().trim());
         });
 
-        // --- CHAPTER LIST ---
-        // Selektor yang benar: ul.row-content-chapter li
         $('ul.row-content-chapter li').each((index, element) => {
-            $elements = $(element);
-            
-            let title = $elements.find('a.chapter-name').text().trim(); 
-            let url = $elements.find('a.chapter-name').attr('href');
-            let time = $elements.find('span.chapter-time').text().trim(); 
-            
-            ch_list.push({'ch_title': title, 'time': time, 'url': url});    
+            const $elements = $(element);
+
+            const title = $elements.find('a.chapter-name').text().trim();
+            const url = $elements.find('a.chapter-name').attr('href');
+            const time = $elements.find('span.chapter-time').text().trim();
+
+            ch_list.push({ ch_title: title, time, url });
         });
-        
+
         ch_list.reverse();
 
-        return await ({
-            'page': manhwa_title, 'other_name': other_name, 'poster': poster,
-            'authors': author, 'artists': artist, 'genres': genres, 
-            'status': status, 'description': description, 'ch_list': ch_list 
-        });
+        return {
+            page: manhwa_title,
+            other_name,
+            poster,
+            authors: author,
+            artists: artist,
+            genres,
+            status,
+            description,
+            ch_list
+        };
 
     } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Info!'});
+        return { error: error.message };
     }
 }
 
-// --- 4. FUNGSI chapter(manga, chapter) (GAMBAR CHAPTER) ---
+
+// ======================================================
+// 4. CHAPTER (image list)
+// ======================================================
 async function chapter(manga, chapter) {
-    let ch_list = []
-    try{
-        // Panggil URL Chapter
-        res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, axiosConfig)
-        const body = await res.data;
-        const $ = cheerio.load(body)
+    let ch_list = [];
 
-        // --- 1. GAMBAR (FINAL FIX V.5 - Menggabungkan Selektor) ---
-        
-        // Selektor 1: Gambar di dalam div.read-manga (paling akurat dari screenshot)
-        $('div.read-manga img').each((index, element) => {
-            $elements = $(element)
-            let image = $elements.attr('data-src') || $elements.attr('src'); 
+    try {
+        const res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, { headers: axiosConfig.headers });
+        const body = res.data;
+        const $ = cheerio.load(body);
 
-            if (image) {
-                image = image.trim().split('?')[0]; 
-                
-                // Hanya filter iklan
-                if (!image.includes('advertisement') && !image.includes('ads')) { 
-                    ch_list.push({'ch': image}) 
-                }
-            }
-        })
-        
-        // Selektor 2: Gambar di dalam entry-content (untuk berjaga-jaga jika kontainer berbeda)
-        // Kita hanya menjalankan ini jika ch_list masih kosong
-        if (ch_list.length === 0) {
-            $('.entry-content img').each((index, element) => {
-                $elements = $(element)
-                let image = $elements.attr('data-src') || $elements.attr('src'); 
+        // Fallback selectors
+        const imgSelectors = [
+            'div.read-manga img',
+            '.reading-content img',
+            '.entry-content img',
+            '.main-reading-area img'
+        ];
+
+        imgSelectors.forEach(sel => {
+            $(sel).each((i, el) => {
+                let image = $(el).attr('data-src') || $(el).attr('src');
 
                 if (image) {
-                    image = image.trim().split('?')[0]; 
-                    if (!image.includes('advertisement') && !image.includes('ads')) { 
-                        ch_list.push({'ch': image}) 
+                    image = image.trim().split('?')[0];
+
+                    if (!image.includes('ads') && !image.includes('advertisement')) {
+                        ch_list.push({ ch: image });
                     }
                 }
-            })
-        }
-        
-        // Hapus duplikat (jika ada)
-        ch_list = ch_list.filter((v, i, a) => a.findIndex(t => (t.ch === v.ch)) === i)
+            });
+        });
 
-        // --- 2. JUDUL & NAVIGASI (SUDAH BERHASIL) ---
-        
-        // Judul Chapter
-        let current_ch = $('.breadcrumb > li:nth-child(3)').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
-        
-        // Data Manga
-        let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
-        let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
+        // Remove duplicates
+        ch_list = ch_list.filter((v, i, a) => a.findIndex(t => t.ch === v.ch) === i);
 
-        // Navigasi
+        const current_ch = $('.breadcrumb > li:nth-child(3)').text().trim()
+            || $('#chapter-heading').text().trim()
+            || $('.entry-header h1').text().trim();
+
+        const manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
+        const manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
+
         let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
         let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
-        
+
         if (prev === '#') prev = null;
         if (next === '#') next = null;
 
-        return await ({
-            'manga': manga_title,
-            'manga_url': manga_url,
-            'current_ch': current_ch,
-            'chapters': ch_list,
-            'nav': [{'prev': prev, 'next': next}]
-        })
-     } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
-     }
+        return {
+            manga: manga_title,
+            manga_url,
+            current_ch,
+            chapters: ch_list,
+            nav: [{ prev, next }]
+        };
+
+    } catch (error) {
+        return { error: error.message };
+    }
 }
+
 
 module.exports = {
     latest,
     all,
     info,
-    chapter,
-}
-
-
-
+    chapter
+};
