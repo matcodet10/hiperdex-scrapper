@@ -36,7 +36,7 @@ app.get('/api/all/:page', async (req, res) => {
 
 
 // Info
-app.get('/api/info/:slug', async (req, res) => {
+app.get('/api/info/manga/:slug', async (req, res) => {
     const result = await scapper.info(req.params.slug);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.header("Content-Type", 'application/json');
@@ -66,3 +66,4 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 
 module.exports = app;
+
