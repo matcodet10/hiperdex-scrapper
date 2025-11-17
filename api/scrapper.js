@@ -100,40 +100,42 @@ async function all(page) {
     let m_list = []
 
     try{
-        // PERBAIKAN: Menggunakan axios.get dengan config
-        res = await axios.get(`https://hiperdex.com/mangalist/?start=${page}`, axiosConfig)
+        // URL Diperbaiki: Menggunakan format Genre/Kategori dengan nomor halaman
+        res = await axios.get(`https://manga18fx.com/manga-genre/manhwa/${page}`, axiosConfig) 
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        let p_title = $('.c-blog__heading h1').text().trim()
-
-        // PERBAIKAN SELEKTOR UTAMA: Menggunakan '.page-listing-item' (lebih stabil)
-        $('#loop-content .page-listing-item').each((index, element) => {
+        // Kontainer Utama: Sama dengan latest
+        const listContainer = $('.listupd'); 
+        
+        // SELEKTOR PERULANGAN: Item manga adalah .bsx-item
+        listContainer.find('.bsx-item').each((index, element) => { 
 
             $elements = $(element)
             
-            // PERBAIKAN SELEKTOR INTERNAL: Menggunakan selektor spesifik yang telah dikonfirmasi
-            image = $elements.find('.item-thumb img').attr('src')
-            url = $elements.find('.item-thumb a').attr('href')
-            title = $elements.find('.post-title h3 a').text().trim() 
-            rating = $elements.find('.total_votes').text().trim()
+            // --- DATA MANGA (Sama dengan latest) ---
+            url = $elements.find('a').attr('href')
+            image = $elements.find('img').attr('src')
+            title = $elements.find('a').attr('title') 
+            rating = $elements.find('.numscore').text().trim() 
 
-            chapter = $elements.find('.list-chapter .chapter-item')
+            // --- DATA CHAPTER TERBARU (Sama dengan latest) ---
+            chapter_items = $elements.find('.epxs a'); 
 
             let chapters = []
             
-            $(chapter).each((i,e)=>{
+            $(chapter_items).each((i,e)=>{
 
-                let c_title = $(e).find('a').text().trim()
-                let c_url = $(e).find('a').attr('href')
-                let c_date = $(e).find('.post-on').text().trim()
-                let status = $(e).find('.post-on a').attr('title')
+                let c_title = $(e).text().trim()
+                let c_url = $(e).attr('href')
+                // Tanggal ada di elemen <span> di dalam .epxs
+                let c_date = $(e).parent().find('span').text().trim()
 
                 chapters.push({
                     'c_title': c_title,
                     'c_url': c_url,
                     'c_date': c_date,
-                    'status': status
+                    'status': null 
                 })
             })
 
@@ -146,24 +148,31 @@ async function all(page) {
             })    
         })
 
-        let current = $('.current').text()
+        // --- DATA PAGINATION ---
+        // Mencari pagination
+        let current = $('.pagination .current').text()
+        let last_page_link = $('.pagination .last a').attr('href')
         
-        let last_page = $('.last').attr('href')
-        !last_page?last_page=current:last_page
-
+        let last_page = current;
+        if (last_page_link) {
+            // Logika untuk mendapatkan nomor halaman terakhir dari link genre
+            const match = last_page_link.match(/\/(\d+)\/?$/); // Mencari angka di akhir URL
+            if (match) {
+                last_page = match[1];
+            }
+        }
+        
          return await ({
-             'p_title': p_title,
+             'p_title': 'Manhwa Genre List',
              'list': m_list,
              'current_page': parseInt(current),
-             'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
+             'last_page': parseInt(last_page)
          })
      } catch (error) {
-     // AKTIFKAN INI UNTUK MELIHAT PESAN ERROR ASLI DARI AXIOS
-     console.error("Gagal saat mengambil Info:", error.message); 
-     // Jika error adalah respons HTTP, coba log statusnya:
-     // console.error("Kode Status:", error.response.status); 
-     return await ({'error': 'Sorry dude, an error occured! No Info!'})
- }
+         // console.error(error); 
+         return await ({'error': 'Sorry dude, an error occured! No Genre List!'})
+     }
+
 }
 
 // --- Fungsi latest(page) (Baru Diperbarui) ---
@@ -309,6 +318,7 @@ module.exports = {
     info,
     chapter
 }
+
 
 
 
