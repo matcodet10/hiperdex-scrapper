@@ -147,7 +147,7 @@ async function latest(page) {
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-2').each((index, element) => {
+        $('#loop-content .auto-col badge-pos-2').each((index, element) => {
 
                 $elements = $(element)
                 image = $elements.find('.page-item-detail').find('img').attr('src')
@@ -249,5 +249,6 @@ module.exports = {
     info,
     chapter
 }
+
 
 
