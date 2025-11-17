@@ -204,8 +204,8 @@ async function chapter(manga, chapter) {
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // --- 1. PERBAIKAN GAMBAR: Selektor Gambar Chapter ---
-        // Mencoba selektor yang lebih agresif (entry-content)
+        // --- 1. PERBAIKAN GAMBAR: Selektor Gambar Chapter (FIXED) ---
+        // Mencoba selektor yang paling mungkin: entry-content atau reading-content
         $('.entry-content img, .reading-content img').each((index, element) => {
             $elements = $(element)
             // Mengambil src atau data-src
@@ -217,15 +217,15 @@ async function chapter(manga, chapter) {
                 
                 // Filter iklan dan gambar kecil/logo
                 if (!image.includes('advertisement') && !image.includes('ads') && !image.includes('logo')) { 
-                    // Pastikan gambar memiliki lebar/tinggi minimum (opsional, untuk filter noise)
                     ch_list.push({'ch': image}) 
                 }
             }
         })
 
-        // --- 2. PERBAIKAN JUDUL & NAVIGASI ---
+        // --- 2. PERBAIKAN JUDUL & NAVIGASI (FIXED) ---
         
         // Judul Chapter (Coba selektor umum untuk header)
+        // Ambil teks header mana pun yang ada
         let current_ch = $('.entry-header .c-chap-number').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
         
         // Navigasi (Coba selektor navigasi umum)
@@ -245,7 +245,6 @@ async function chapter(manga, chapter) {
             'nav': [{'prev': prev, 'next': next}]
         })
      } catch (error) {
-         // console.error(error); // Aktifkan untuk debugging
          return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
      }
 }
@@ -256,6 +255,7 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
 
 
