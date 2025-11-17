@@ -202,46 +202,49 @@ async function chapter(manga, chapter) {
 
     const $ = cheerio.load(data);
 
-    const breadcrumb = $(".breadcrumb li");
+        // -------------------------
+        // ⭐ BREADCRUMB FIX FINAL
+        // -------------------------
+        const breadcrumb = $(".breadcrumb li");
 
-    const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
-    const mangaUrl = $(breadcrumb[2]).find("a").attr("href") || null;
+        const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
+        const mangaUrl = $(breadcrumb[2]).find("a").attr("href")?.trim() || null;
 
-    const chapterTitle =
-    $(breadcrumb[3]).text().trim() ||
-    $(".entry-title").text().trim() ||
-    $(".chapter-details h1").text().trim();
+        // Chapter title ambil dari breadcrumb → fallback ke <h1>
+        const chapterTitle =
+            $(breadcrumb[3]).text().trim() ||
+            $(".entry-title").text().trim() ||
+            chapter.replace("-", " ").toUpperCase();
 
-    // Image Scraping
-    const images = [];
-    $(".page-break img").each((i, el) => {
-      let img =
-        $(el).attr("data-src") ||
-        $(el).attr("src") ||
-        $(el).attr("data-lazy-src");
-      
-      if (!img) return;
+        // -------------------------
+        // ⭐ SCRAPE IMAGES
+        // -------------------------
+        const images = [];
 
-      if (img.startsWith("//")) img = "https:" + img;
-      if (img.startsWith("/")) img = BASE_URL + img;
+        $(".page-break img").each((i, el) => {
+            const dataSrc = $(el).attr("data-src");
+            const src = $(el).attr("src");
 
-      images.push(img);
-    });
+            const img = dataSrc || src;
+            if (img && img.startsWith("http")) {
+                images.push(img.trim());
+            }
+        });
 
-    return {
-      manga: mangaTitle,
-      manga_url: mangaUrl,
-      current_ch: chapterTitle,
-      images,
-      count: images.length
-    };
+        return {
+            manga: mangaTitle || "Unknown Title",
+            manga_url: mangaUrl,
+            current_ch: chapterTitle,
+            images: images,
+            count: images.length,
+        };
 
-  } catch (err) {
-    return {
-      error: true,
-      message: err.message
-    };
-  }
+    } catch (err) {
+        return {
+            error: true,
+            message: err.message,
+        };
+    }
 }
 
 
@@ -251,6 +254,7 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
 
