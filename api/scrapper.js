@@ -204,37 +204,55 @@ async function chapter(manga, chapter) {
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // --- 1. GAMBAR (FINAL FIX) ---
-        // Targetkan IMG dengan class 'img-loading' yang berada di konten utama.
-        $('.read-manga img.img-loading, .reading-content img').each((index, element) => {
+        // --- 1. GAMBAR (FINAL FIX V.5 - Menggabungkan Selektor) ---
+        
+        // Selektor 1: Gambar di dalam div.read-manga (paling akurat dari screenshot)
+        $('div.read-manga img').each((index, element) => {
             $elements = $(element)
-            // Coba data-src (untuk lazy load), lalu src
-            let image = $elements.attr('data-src') || $elements.attr('src') || null; 
+            let image = $elements.attr('data-src') || $elements.attr('src'); 
 
             if (image) {
                 image = image.trim().split('?')[0]; 
                 
-                // Filter iklan/noise
-                if (!image.includes('advertisement') && !image.includes('ads') && !image.includes('logo') && image.length > 5) { 
+                // Hanya filter iklan
+                if (!image.includes('advertisement') && !image.includes('ads')) { 
                     ch_list.push({'ch': image}) 
                 }
             }
         })
+        
+        // Selektor 2: Gambar di dalam entry-content (untuk berjaga-jaga jika kontainer berbeda)
+        // Kita hanya menjalankan ini jika ch_list masih kosong
+        if (ch_list.length === 0) {
+            $('.entry-content img').each((index, element) => {
+                $elements = $(element)
+                let image = $elements.attr('data-src') || $elements.attr('src'); 
 
-        // --- 2. JUDUL (FINAL FIX) ---
-        // Ambil dari breadcrumb li:nth-child(3) atau h1/h2 di halaman
+                if (image) {
+                    image = image.trim().split('?')[0]; 
+                    if (!image.includes('advertisement') && !image.includes('ads')) { 
+                        ch_list.push({'ch': image}) 
+                    }
+                }
+            })
+        }
+        
+        // Hapus duplikat (jika ada)
+        ch_list = ch_list.filter((v, i, a) => a.findIndex(t => (t.ch === v.ch)) === i)
+
+        // --- 2. JUDUL & NAVIGASI (SUDAH BERHASIL) ---
+        
+        // Judul Chapter
         let current_ch = $('.breadcrumb > li:nth-child(3)').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
         
-        // Data Manga (dari breadcrumb li:nth-child(2), sudah benar)
+        // Data Manga
         let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
         let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
 
-        // --- 3. NAVIGASI (FINAL FIX) ---
-        // Selektor navigasi umum
+        // Navigasi
         let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
         let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
         
-        // Pastikan prev/next adalah null jika tidak ada
         if (prev === '#') prev = null;
         if (next === '#') next = null;
 
@@ -248,6 +266,7 @@ async function chapter(manga, chapter) {
      } catch (error) {
          return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
      }
+
 }
 
 module.exports = {
@@ -256,6 +275,7 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
 
 
