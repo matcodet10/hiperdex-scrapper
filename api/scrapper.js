@@ -42,56 +42,80 @@ async function chaptersList(url){
 
 // --- Fungsi info(slug) (Detail Manhwa) ---
 async function info(slug) {
-    let genres = []
+    let genres = [];
+    let ch_list = [];
 
     try{
-        // PERBAIKAN: Menggunakan axios.get dengan config
-        res = await axios.get(`https://hiperdex.com/manga/${slug}`, axiosConfig)
+        // Panggil halaman info dengan header yang sudah terbukti berhasil
+        res = await axios.get(`https://manga18fx.com/manga/${slug}`, axiosConfig);
         const body = await res.data;
-        const $ = cheerio.load(body)
+        const $ = cheerio.load(body);
 
-        let manhwa_title = $('.post-title > h1:nth-child(1)').text().trim()
-        let poster = $('.summary_image img').attr('src')
-        let author = $('.author-content a').text().trim()
-        let artist = $('.artist-content a').text().trim()
-
-        let genres_e = $('.genres-content a')
+        // --- 1. DATA DETAIL MANGA ---
+        let manhwa_title = $('.post-title h1').text().trim();
+        // Cek: Beberapa situs menggunakan data-src, tapi di sini terlihat menggunakan src
+        let poster = $('.summary_image img').attr('src'); 
         
+        // Penulis dan Artis menggunakan selektor yang sama, hanya di konteks yang berbeda
+        let author = $('.author-content a').text().trim();
+        let artist = $('.artist-content a').text().trim();
+
+        // Nama Alternatif (menggunakan struktur div ke-2)
+        // NOTE: Ini masih rentan, lebih baik cari berdasarkan label 'Alternative'
+        let other_name = $('.summary_content > div:nth-child(2)').text().trim().replace('Alternative:', '').trim(); 
+        
+        // Status
+        let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); // Memerlukan penyesuaian untuk mendapatkan hanya nilai status
+
+        // Deskripsi (Tidak ada di screenshot, tapi menggunakan selektor umum)
+        // Jika ini gagal, cek class HTML deskripsi di situs
+        let description = $('.description-summary .summary__content').text().trim(); 
+
+        // --- 2. GENRES ---
+        let genres_e = $('.genres-content a');
         $(genres_e).each((i,e)=>{
-            genres.push($(e).text().trim())
-        })
+            genres.push($(e).text().trim());
+        });
 
-        let other_name = $('div.post-content_item:nth-child(5) > div:nth-child(2)').text().trim()
-        let status = $('div.post-content_item:nth-child(2) > div:nth-child(2)').text().trim()
+        // --- 3. CHAPTER LIST (Ambil Langsung dari HTML) ---
+        // Kontainer daftar chapter
+        $('.listing-chapters_wrap li').each((index, element) => {
+            $elements = $(element);
+            
+            // Cek struktur list chapter
+            let title = $elements.find('a').text().trim(); 
+            let url = $elements.find('a').attr('href');
+            let time = $elements.find('.chapter-release-date').text().trim(); 
+            
+            // Masukkan ke array ch_list
+            ch_list.push({
+                'ch_title': title, 
+                'time': time, 
+                'url': url
+            });    
+        });
         
-        let description = $('.description-summary').text().trim()
+        // Balik urutan chapter agar yang terbaru di atas (optional, tergantung preferensi)
+        ch_list.reverse();
 
-        let ch_list = await chaptersList(`https://hiperdex.com/manga/${slug}/ajax/chapters/`)
 
-         return await ({
-             'page': manhwa_title,
-             'other_name': other_name,
-             'poster': poster,
-             'authors': author,
-             'artists': artist,
-             'genres':genres,
-             'status': status,
-             'description': description,
-             ch_list
-         })
-     } catch (error) {
-     // 1. Log error.message untuk melihat apa yang dikatakan Axios
-     console.error("Pesan Error Axios:", error.message);
-     
-     // 2. Cek apakah ada respons (yaitu, kode status HTTP seperti 403 atau 404)
-     if (error.response) {
-         console.error("Kode Status HTTP:", error.response.status); 
-         console.error("Header Respons:", error.response.headers);
-     }
-     
-     // Kemudian, kembalikan output error Anda:
-     return await ({'error': 'Sorry dude, an error occured! No Info!'})
- }
+        return await ({
+            'page': manhwa_title,
+            'other_name': other_name,
+            'poster': poster,
+            'authors': author,
+            'artists': artist,
+            'genres': genres,
+            'status': status,
+            'description': description,
+            'ch_list': ch_list 
+        });
+
+    } catch (error) {
+         // console.error(error); // Aktifkan untuk debugging
+         return await ({'error': 'Sorry dude, an error occured! No Info!'});
+    }
+
 }
 
 // --- Fungsi all(page) (Daftar A-Z) ---
@@ -318,6 +342,7 @@ module.exports = {
     info,
     chapter
 }
+
 
 
 
