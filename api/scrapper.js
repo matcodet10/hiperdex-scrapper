@@ -245,6 +245,8 @@ async function chapter(manga, chapter) {
     }
 }
 
+//semoga ini berhasil
+
 
 module.exports = {
   latest,
@@ -252,4 +254,5 @@ module.exports = {
   info,
   chapter,
 };
+
 
