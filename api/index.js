@@ -9,7 +9,7 @@ app.use(cors());
 
 // --- KONFIGURASI PENTING ---
 // GANTI DENGAN DOMAIN CLOUDFLARE WORKER ANDA YANG SEBENARNYA!
-const WORKER_URL = 'https://your-worker-domain.workers.dev'; 
+const WORKER_URL = 'https://image-proxy.fuadkhalish098.workers.dev'; 
 // -------------------------
 
 // Middleware untuk meneruskan permintaan ke Worker
@@ -91,3 +91,4 @@ app.get('/api/chapter/:manga/:chapter', (req, res) => {
 
 // Export aplikasi untuk digunakan oleh Vercel
 module.exports = app;
+
