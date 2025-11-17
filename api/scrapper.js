@@ -134,68 +134,46 @@ async function all(page) {
 }
 
 // --- 3. FUNGSI info(slug) (DETAIL MANHWA) ---
-async function info(slug) {
-    let genres = [];
-    let ch_list = [];
-
+async function chapter(manga, chapter) {
+    let ch_list = []
     try{
-        // Panggil halaman info
-        res = await axios.get(`${BASE_URL}/manga/${slug}`, axiosConfig);
+        // URL Chapter
+        res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, axiosConfig)
         const body = await res.data;
-        const $ = cheerio.load(body);
+        const $ = cheerio.load(body)
 
-        // --- DATA DETAIL MANGA ---
-        let manhwa_title = $('.post-title h1').text().trim();
-        let poster = $('.summary_image img').attr('src'); 
+        // Selektor Gambar Chapter (umumnya .reading-content img)
+        $('.reading-content img').each((index, element) => {
+            $elements = $(element)
+            // Mengambil src atau data-src
+            image = $elements.attr('src') ? $elements.attr('src').trim() : $elements.attr('data-src').trim() 
+
+            if (image && !image.includes('advertisement') && !image.includes('ads')) { // Filter iklan
+                ch_list.push({'ch': image}) 
+            }
+        })
+
+        // --- NAVIGASI DAN JUDUL ---
+        let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
+        let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
         
-        let author = $('.author-content a').text().trim();
-        let artist = $('.artist-content a').text().trim();
-
-        // Nama Alternatif (menggunakan selektor teks "Alternative" untuk keamanan)
-        // Dibuat lebih spesifik untuk mengambil nilai yang benar
-        let other_name_raw = $('.summary_content .post-content_item:contains("Alternative")').text();
-        let other_name = other_name_raw.replace(/Alternative:/g, '').trim();
-
-        // Status
-        let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); 
-
-        // --- DESKRIPSI (FIXED) ---
-        // Menggunakan ID #panel-story-description dan membersihkan label "SUMMARY"
-        let description = $('#panel-story-description').text().trim(); 
-        if (description.startsWith('SUMMARY')) {
-            description = description.replace('SUMMARY', '').trim();
-        }
-
-        // --- GENRES ---
-        let genres_e = $('.genres-content a');
-        $(genres_e).each((i,e)=>{
-            genres.push($(e).text().trim());
-        });
-
-        // --- CHAPTER LIST (FIXED) ---
-        // Menggunakan selektor yang lebih spesifik untuk item list
-        $('.list-chapter li').each((index, element) => {
-            $elements = $(element);
-            
-            let title = $elements.find('a').text().trim(); 
-            let url = $elements.find('a').attr('href');
-            let time = $elements.find('.chapter-release-date').text().trim(); 
-            
-            ch_list.push({'ch_title': title, 'time': time, 'url': url});    
-        });
+        let current_ch = $('#chapter-heading').text().trim();
         
-        // Membalik urutan agar chapter terbaru di atas
-        ch_list.reverse();
+        // Navigasi
+        let prev = $('.nav-links .prev-link a').attr('href');
+        let next = $('.nav-links .next-link a').attr('href');
+        
 
         return await ({
-            'page': manhwa_title, 'other_name': other_name, 'poster': poster,
-            'authors': author, 'artists': artist, 'genres': genres, 
-            'status': status, 'description': description, 'ch_list': ch_list 
-        });
-
-    } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Info!'});
-    }
+            'manga': manga_title,
+            'manga_url': manga_url,
+            'current_ch': current_ch,
+            'chapters': ch_list,
+            'nav': [{'prev': prev, 'next': next}]
+        })
+     } catch (error) {
+         return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
+     }
 }
 
 // --- 4. FUNGSI chapter(manga, chapter) (GAMBAR CHAPTER) ---
@@ -247,4 +225,5 @@ module.exports = {
     info,
     chapter
 }
+
 
