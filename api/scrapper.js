@@ -4,7 +4,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 // GANTI DENGAN DOMAIN CLOUDFLARE WORKER ANDA YANG BENAR!
-const IMAGE_PROXY_URL = 'https://your-image-proxy-domain.workers.dev/img-proxy?url=';
+const IMAGE_PROXY_URL = 'https://image-proxy.fuadkhalish098.workers.dev/';
 
 const BASE_URL = 'https://manga18fx.com';
 
@@ -141,3 +141,4 @@ module.exports = {
     info,
     chapter,
 };
+
