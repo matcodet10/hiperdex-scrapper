@@ -199,43 +199,44 @@ async function info(slug) {
 async function chapter(manga, chapter) {
     let ch_list = []
     try{
-        // URL Chapter
+        // Panggil URL Chapter
         res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, axiosConfig)
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // --- 1. PERBAIKAN GAMBAR: Selektor Gambar Chapter (FIXED) ---
-        // Mencoba selektor yang paling mungkin: entry-content atau reading-content
-        $('.entry-content img, .reading-content img').each((index, element) => {
+        // --- 1. GAMBAR (FINAL FIX) ---
+        // Targetkan IMG dengan class 'img-loading' yang berada di konten utama.
+        $('.read-manga img.img-loading, .reading-content img').each((index, element) => {
             $elements = $(element)
-            // Mengambil src atau data-src
-            let image = $elements.attr('src') || $elements.attr('data-src') || null; 
+            // Coba data-src (untuk lazy load), lalu src
+            let image = $elements.attr('data-src') || $elements.attr('src') || null; 
 
             if (image) {
-                // Bersihkan URL dari parameter yang tidak perlu
                 image = image.trim().split('?')[0]; 
                 
-                // Filter iklan dan gambar kecil/logo
-                if (!image.includes('advertisement') && !image.includes('ads') && !image.includes('logo')) { 
+                // Filter iklan/noise
+                if (!image.includes('advertisement') && !image.includes('ads') && !image.includes('logo') && image.length > 5) { 
                     ch_list.push({'ch': image}) 
                 }
             }
         })
 
-        // --- 2. PERBAIKAN JUDUL & NAVIGASI (FIXED) ---
+        // --- 2. JUDUL (FINAL FIX) ---
+        // Ambil dari breadcrumb li:nth-child(3) atau h1/h2 di halaman
+        let current_ch = $('.breadcrumb > li:nth-child(3)').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
         
-        // Judul Chapter (Coba selektor umum untuk header)
-        // Ambil teks header mana pun yang ada
-        let current_ch = $('.entry-header .c-chap-number').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
-        
-        // Navigasi (Coba selektor navigasi umum)
+        // Data Manga (dari breadcrumb li:nth-child(2), sudah benar)
+        let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
+        let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
+
+        // --- 3. NAVIGASI (FINAL FIX) ---
+        // Selektor navigasi umum
         let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
         let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
         
-        // Data Manga (Berhasil)
-        let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
-        let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
-        
+        // Pastikan prev/next adalah null jika tidak ada
+        if (prev === '#') prev = null;
+        if (next === '#') next = null;
 
         return await ({
             'manga': manga_title,
@@ -255,6 +256,7 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
 
 
