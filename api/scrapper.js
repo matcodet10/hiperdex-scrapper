@@ -77,13 +77,13 @@ async function all(page) {
     let m_list = []
 
     try{
-        res = await axios.get(`https://hiperdex.com/mangalist/${page}`)
+        res = await axios.get(`https://hiperdex.com/mangalist/?start=${page}`)
         const body = await res.data;
         const $ = cheerio.load(body)
 
         let p_title = $('.c-blog__heading h1').text().trim()
 
-        $('#loop-content .badge-pos-2').each((index, element) => {
+        $('#loop-content .page-listing-item').each((index, element) => {
 
                 $elements = $(element)
                 image = $elements.find('.page-item-detail').find('img').attr('src')
@@ -249,6 +249,7 @@ module.exports = {
     info,
     chapter
 }
+
 
 
 
