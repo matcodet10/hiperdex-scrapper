@@ -193,9 +193,7 @@ async function info(slug) {
 // ======================================================
 // 4. CHAPTER (image list)
 // ======================================================
-async function chapter(manga, chapter) {
-  let ch_list = [];
-
+async function chapter(url) {
   try {
     const baseUrl = "https://manga18fx.com";
 
@@ -269,6 +267,7 @@ module.exports = {
     info,
     chapter
 };
+
 
 
 
