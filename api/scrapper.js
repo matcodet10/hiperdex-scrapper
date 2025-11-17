@@ -1,9 +1,7 @@
 const cheerio = require("cheerio");
 const axios = require("axios");
 
-// ==============================
-// CONFIG (ANTI BOT)
-// ==============================
+
 const BASE_URL = "https://manga18fx.com";
 
 const axiosConfig = {
@@ -17,22 +15,13 @@ const axiosConfig = {
   },
 };
 
-// =========================================
-// Helper Function: Membersihkan slug dari prefix/path (Fungsi yang hilang telah dikembalikan!)
-// =========================================
 function cleanSlug(slug) {
     if (!slug) return '';
-    // Hapus prefix yang mungkin ikut terbawa dari router: /info, /manga, /chapter, dll.
     let cleaned = slug.replace(/^(info\/|chapter\/|manga\/|manga-)/i, '');
-    // Hapus garis miring di awal jika ada
     cleaned = cleaned.replace(/^\//, '');
     return cleaned;
 }
 
-
-// =========================================
-// 1. LATEST
-// =========================================
 async function latest(page) {
   try {
     const res = await axios.get(`${BASE_URL}/page/${page}`, axiosConfig);
@@ -81,9 +70,7 @@ async function latest(page) {
   }
 }
 
-// =========================================
-// 2. ALL
-// =========================================
+
 async function all(page) {
   try {
     const pageNumber = parseInt(page) || 1;
@@ -138,15 +125,9 @@ async function all(page) {
   }
 }
 
-// =========================================
-// 3. INFO (Slug Cleaning Applied)
-// =========================================
 async function info(slug) {
   try {
-    // Memastikan slug bersih dari prefix '/info/' atau '/manga/'
     const cleanedSlug = cleanSlug(slug);
-
-    // URL yang dibentuk: https://manga18fx.com/manga/nailing-the-assignment-uncensored
     const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
@@ -203,18 +184,14 @@ async function info(slug) {
   }
 }
 
-// =========================================
-// 4. CHAPTER (Slug Cleaning Applied)
-// =========================================
 async function chapter(manga, chapter) {
   try {
     const BASE_URL = "https://manga18fx.com";
     
-    // Memastikan slug bersih
     const cleanedManga = cleanSlug(manga);
     const cleanedChapter = cleanSlug(chapter);
 
-    // Build URL secara aman
+
     const url = `${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/`;
 
     console.log("🔍 Fetching Chapter:", url);
@@ -229,23 +206,17 @@ async function chapter(manga, chapter) {
 
     const $ = cheerio.load(data);
 
-        // -------------------------
-        // ⭐ BREADCRUMB FIX FINAL
-        // -------------------------
         const breadcrumb = $(".breadcrumb li");
 
         const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
         const mangaUrl = $(breadcrumb[2]).find("a").attr("href")?.trim() || null;
 
-        // Chapter title ambil dari breadcrumb → fallback ke <h1>
+
         const chapterTitle =
             $(breadcrumb[3]).text().trim() ||
             $(".entry-title").text().trim() ||
             chapter.replace("-", " ").toUpperCase();
 
-        // -------------------------
-        // ⭐ SCRAPE IMAGES
-        // -------------------------
         const images = [];
 
         $(".page-break img").each((i, el) => {
@@ -281,3 +252,4 @@ module.exports = {
   info,
   chapter,
 };
+
