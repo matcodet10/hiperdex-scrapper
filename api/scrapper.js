@@ -264,7 +264,8 @@ module.exports = {
     latest,
     all,
     info,
-    chapter
+    chapter,
 }
+
 
 
