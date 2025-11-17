@@ -80,10 +80,16 @@ async function info(slug) {
              ch_list
          })
      } catch (error) {
-     // AKTIFKAN INI UNTUK MELIHAT PESAN ERROR ASLI DARI AXIOS
-     console.error("Gagal saat mengambil Info:", error.message); 
-     // Jika error adalah respons HTTP, coba log statusnya:
-     // console.error("Kode Status:", error.response.status); 
+     // 1. Log error.message untuk melihat apa yang dikatakan Axios
+     console.error("Pesan Error Axios:", error.message);
+     
+     // 2. Cek apakah ada respons (yaitu, kode status HTTP seperti 403 atau 404)
+     if (error.response) {
+         console.error("Kode Status HTTP:", error.response.status); 
+         console.error("Header Respons:", error.response.headers);
+     }
+     
+     // Kemudian, kembalikan output error Anda:
      return await ({'error': 'Sorry dude, an error occured! No Info!'})
  }
 }
@@ -280,4 +286,5 @@ module.exports = {
     info,
     chapter
 }
+
 
