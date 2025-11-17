@@ -204,9 +204,8 @@ async function chapter(manga, chapter) {
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // --- 1. GAMBAR (FINAL FIX V.5 - Menggabungkan Selektor) ---
+        // --- 1. GAMBAR (FINAL FIX V.6 - Filter Noise) ---
         
-        // Selektor 1: Gambar di dalam div.read-manga (paling akurat dari screenshot)
         $('div.read-manga img').each((index, element) => {
             $elements = $(element)
             let image = $elements.attr('data-src') || $elements.attr('src'); 
@@ -214,42 +213,30 @@ async function chapter(manga, chapter) {
             if (image) {
                 image = image.trim().split('?')[0]; 
                 
-                // Hanya filter iklan
-                if (!image.includes('advertisement') && !image.includes('ads')) { 
+                // FILTERING AGRESIVE:
+                if (
+                    // 1. Cek apakah URL berisi nama domain gambar yang benar (img01.manga18fx.com)
+                    // ATAU apakah ini adalah URL path yang panjang (misalnya, /chapters/...)
+                    image.includes('img01.manga18fx.com/chapters') &&
+                    // 2. Pastikan bukan iklan
+                    !image.includes('advertisement') && 
+                    !image.includes('ads') &&
+                    // 3. Pastikan tidak berakhiran m.jpg (yang merupakan thumbnail promosi)
+                    !image.endsWith('m.jpg') 
+                ) { 
                     ch_list.push({'ch': image}) 
                 }
             }
         })
         
-        // Selektor 2: Gambar di dalam entry-content (untuk berjaga-jaga jika kontainer berbeda)
-        // Kita hanya menjalankan ini jika ch_list masih kosong
-        if (ch_list.length === 0) {
-            $('.entry-content img').each((index, element) => {
-                $elements = $(element)
-                let image = $elements.attr('data-src') || $elements.attr('src'); 
-
-                if (image) {
-                    image = image.trim().split('?')[0]; 
-                    if (!image.includes('advertisement') && !image.includes('ads')) { 
-                        ch_list.push({'ch': image}) 
-                    }
-                }
-            })
-        }
-        
-        // Hapus duplikat (jika ada)
+        // Hapus duplikat
         ch_list = ch_list.filter((v, i, a) => a.findIndex(t => (t.ch === v.ch)) === i)
 
-        // --- 2. JUDUL & NAVIGASI (SUDAH BERHASIL) ---
-        
-        // Judul Chapter
+        // --- 2. JUDUL & NAVIGASI ---
         let current_ch = $('.breadcrumb > li:nth-child(3)').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
-        
-        // Data Manga
         let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
         let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
 
-        // Navigasi
         let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
         let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
         
@@ -266,7 +253,6 @@ async function chapter(manga, chapter) {
      } catch (error) {
          return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
      }
-
 }
 
 module.exports = {
@@ -275,6 +261,7 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
 
 
