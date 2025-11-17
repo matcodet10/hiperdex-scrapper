@@ -197,47 +197,60 @@ async function chapter(manga, chapter) {
     let ch_list = [];
 
     try {
-        const res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, { headers: axiosConfig.headers });
-        const body = res.data;
-        const $ = cheerio.load(body);
+        const res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, {
+            headers: axiosConfig.headers
+        });
 
-        // Fallback selectors
-        const imgSelectors = [
-            'div.read-manga img',
-            '.reading-content img',
-            '.entry-content img',
-            '.main-reading-area img'
-        ];
+        const $ = cheerio.load(res.data);
 
-        imgSelectors.forEach(sel => {
-            $(sel).each((i, el) => {
-                let image = $(el).attr('data-src') || $(el).attr('src');
+        // ✅ Selector yang benar-benar dipakai di manga18fx.com
+        const imgSelector = "div.read-content img";
 
-                if (image) {
-                    image = image.trim().split('?')[0];
+        $(imgSelector).each((i, el) => {
+            // Manga site uses data-src for lazy loading
+            let image = $(el).attr("data-src") || $(el).attr("src");
 
-                    if (!image.includes('ads') && !image.includes('advertisement')) {
-                        ch_list.push({ ch: image });
-                    }
-                }
-            });
+            if (!image) return;
+
+            // Clean URL
+            image = image.trim().split("?")[0];
+
+            // Filter iklan
+            if (
+                image.includes("ads") ||
+                image.includes("advertisement") ||
+                image.includes("banner")
+            ) {
+                return;
+            }
+
+            // Filter invalid  icons like "/images/user-1.png"
+            if (!image.startsWith("http")) return;
+
+            ch_list.push({ ch: image });
         });
 
         // Remove duplicates
-        ch_list = ch_list.filter((v, i, a) => a.findIndex(t => t.ch === v.ch) === i);
+        ch_list = [...new Map(ch_list.map(v => [v.ch, v])).values()];
 
-        const current_ch = $('.breadcrumb > li:nth-child(3)').text().trim()
-            || $('#chapter-heading').text().trim()
-            || $('.entry-header h1').text().trim();
+        // Get meta info
+        const current_ch =
+            $(".breadcrumb > li:nth-child(3)").text().trim() ||
+            $("#chapter-heading").text().trim();
 
-        const manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
-        const manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
+        const manga_title = $(".breadcrumb > li:nth-child(2) > a").text().trim();
+        const manga_url = $(".breadcrumb > li:nth-child(2) > a").attr("href");
 
-        let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
-        let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
+        let prev =
+            $(".nav-links .prev-link a").attr("href") ||
+            $(".ch-nav-btn.prev a").attr("href");
 
-        if (prev === '#') prev = null;
-        if (next === '#') next = null;
+        let next =
+            $(".nav-links .next-link a").attr("href") ||
+            $(".ch-nav-btn.next a").attr("href");
+
+        if (prev === "#") prev = null;
+        if (next === "#") next = null;
 
         return {
             manga: manga_title,
@@ -246,7 +259,6 @@ async function chapter(manga, chapter) {
             chapters: ch_list,
             nav: [{ prev, next }]
         };
-
     } catch (error) {
         return { error: error.message };
     }
@@ -259,3 +271,4 @@ module.exports = {
     info,
     chapter
 };
+
