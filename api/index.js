@@ -1,94 +1,65 @@
-// index.js (Dihost di Vercel)
+// index.js (Dideploy di Vercel)
 
+const scrapper = require('./Scrapper');
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios'); // Diperlukan hanya untuk proxying
 
 const app = express();
 app.use(cors());
 
-// --- KONFIGURASI PENTING ---
-// GANTI DENGAN DOMAIN CLOUDFLARE WORKER ANDA YANG SEBENARNYA!
-const WORKER_URL = 'https://image-proxy.fuadkhalish098.workers.dev'; 
-// -------------------------
+// Middleware CORS dasar untuk semua request
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    next();
+});
 
-// Middleware untuk meneruskan permintaan ke Worker
-async function proxyToWorker(req, res, path) {
+// --- ENDPOINT HANDLERS ---
+
+// 1. Latest Chapters: /api/latest/:page
+app.get('/api/latest/:page', async (req, res) => {
     try {
-        // Ambil semua parameter query (page, slug, dll.)
-        const queryParams = new URLSearchParams(req.query).toString();
-        
-        // Buat URL lengkap ke Worker
-        const workerTargetUrl = `${WORKER_URL}${path}?${queryParams}`;
-        
-        // Buat permintaan HTTP ke Worker
-        const workerResponse = await axios.get(workerTargetUrl, {
-            // Penting: Abaikan validasi SSL untuk keamanan jika menggunakan env development
-            // Namun, karena ini adalah Vercel -> Worker, ini tidak terlalu penting.
-            validateStatus: (status) => true, // Terima semua status respons
-        });
-
-        // Teruskan Header dan Status dari Worker ke client
-        res.status(workerResponse.status);
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        
-        // Teruskan data JSON dari Worker
-        res.send(JSON.stringify(workerResponse.data, null, 4));
-
+        const result = await scrapper.latest(req.params.page)
+        res.status(200).json(result);
     } catch (error) {
-        console.error("Error proxying request to Worker:", error.message);
-        res.status(500).json({ 
-            error: "Failed to connect to the Scraper Worker.",
-            worker_url_base: WORKER_URL
-        });
+        res.status(500).json({ error: 'Failed to fetch latest updates', details: error.message });
     }
-}
-
-// --- ROUTING API ---
-
-app.get('/api/', (req, res) => {
-    // Endpoint ini hanya memberikan panduan rute lokal
-    res.send(`
-        API Routes (Proxied to Cloudflare Worker):<br>
-        Latest: /api/latest/:page (params: page)<br>
-        All Manhwa: /api/all/:page (params: page)<br>
-        Manhwa Info: /api/info/:slug (params: slug)<br>
-        Manhwa Chapter: /api/chapter/:manga/:chapter (params: manga, chapter)<br>
-        **Image Proxy Worker (Client-Side): /img-proxy?url=...**
-        `)
-})
-
-// Rute /api/latest
-app.get('/api/latest/:page', (req, res) => {
-    // Meneruskan ke Worker: /latest?page=X
-    req.query.page = req.params.page; // Salin page dari path ke query
-    proxyToWorker(req, res, '/latest');
 });
 
-// Rute /api/all
-app.get('/api/all/:page', (req, res) => {
-    // Meneruskan ke Worker: /all?page=X
-    req.query.page = req.params.page;
-    proxyToWorker(req, res, '/all');
+// 2. All Manhwa List: /api/all/:page
+app.get('/api/all/:page', async (req, res) => {
+    try {
+        const result = await scrapper.all(req.params.page)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch all manhwa list', details: error.message });
+    }
 });
 
-// Rute /api/info
-app.get('/api/info/:slug', (req, res) => {
-    // Meneruskan ke Worker: /info?slug=X
-    req.query.slug = req.params.slug;
-    proxyToWorker(req, res, '/info');
+// 3. Manhwa Info + Chapters: /api/info/:slug
+app.get('/api/info/:slug', async (req, res) => {
+    try {
+        const result = await scrapper.info(req.params.slug)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch manhwa info', details: error.message });
+    }
 });
 
-// Rute /api/chapter (Menggunakan Query Parameter yang Disederhanakan untuk Worker)
-// Worker Anda mengharapkan: /chapter?manga=X&chapter=Y
-app.get('/api/chapter/:manga/:chapter', (req, res) => {
-    // Meneruskan ke Worker: /chapter?manga=X&chapter=Y
-    req.query.manga = req.params.manga;
-    req.query.chapter = req.params.chapter;
-    proxyToWorker(req, res, '/chapter');
+
+// 4. Manhwa Images List: /api/chapter/:manga/:chapter
+app.get('/api/chapter/:manga/:chapter', async (req, res) => {
+    try {
+        const result = await scrapper.chapter(req.params.manga, req.params.chapter)
+        // Cache-Control untuk respons JSON yang tidak akan berubah
+        res.setHeader('Cache-Control', 's-maxage=43200'); 
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch chapter images list', details: error.message });
+    }
 });
+
 
 // Export aplikasi untuk digunakan oleh Vercel
 module.exports = app;
-
