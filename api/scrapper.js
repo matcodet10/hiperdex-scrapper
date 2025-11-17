@@ -197,57 +197,69 @@ async function chapter(manga, chapter) {
   let ch_list = [];
 
   try {
-    const url = `${BASE_URL}/manga/${manga}/${chapter}`;
-    const res = await axios.get(url, { headers: axiosConfig.headers });
+    const baseUrl = "https://manga18fx.com";
 
-    console.log("DEBUG CHAPTER HTML:", res.data);
-    console.log(res.data);
-    const $ = cheerio.load(res.data);
-
-    const selectors = [
-      "div.read-content img",
-      ".page-break img",
-      ".reader-area img",
-      "img[data-src]",
-    ];
-
-    selectors.forEach(sel => {
-      $(sel).each((i, el) => {
-        let img = $(el).attr("data-src") || $(el).attr("src");
-        if (!img) return;
-        img = img.trim().split("?")[0];
-        if (img.startsWith("http") && !img.includes("ads")) {
-          ch_list.push({ ch: img });
-        }
-      });
+    const { data } = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
     });
 
-    // dedupe
-    ch_list = [...new Map(ch_list.map(v => [v.ch, v])).values()];
+    const $ = cheerio.load(data);
 
-    if (ch_list.length === 0) {
-      return { error: "No images found in chapter", url, html: res.data };
-    }
+    // ------------------------------
+    // Title Manga
+    // ------------------------------
+    const mangaTitle =
+      $(".breadcrumb li:nth-child(3) a").text().trim() ||
+      $(".post-title h1").text().trim();
 
-    // ambil meta
-    const current_ch = $(".breadcrumb > li:nth-child(3)").text().trim();
-    const manga_title = $(".breadcrumb > li:nth-child(2) > a").text().trim();
-    const manga_url = $(".breadcrumb > li:nth-child(2) > a").attr("href");
-    let prev = $(".nav-links .prev-link a").attr("href");
-    let next = $(".nav-links .next-link a").attr("href");
+    // ------------------------------
+    // Manga URL
+    // ------------------------------
+    const mangaUrl =
+      $(".breadcrumb li:nth-child(3) a").attr("href") || null;
 
-    if (prev === "#") prev = null;
-    if (next === "#") next = null;
+    // ------------------------------
+    // Current Chapter Title
+    // ------------------------------
+    const chapterTitle =
+      $(".breadcrumb li:nth-child(4)").text().trim() ||
+      $(".chapter-header h1").text().trim();
+
+    // ------------------------------
+    // IMAGE SCRAPING
+    // ------------------------------
+    const images = [];
+
+    $(".page-break img").each((i, el) => {
+      let img =
+        $(el).attr("data-src") ||
+        $(el).attr("src") ||
+        $(el).attr("data-lazy-src");
+
+      if (!img) return;
+
+      // Fix relative URL
+      if (img.startsWith("//")) img = "https:" + img;
+      if (img.startsWith("/")) img = baseUrl + img;
+
+      images.push(img);
+    });
 
     return {
-      manga: manga_title,
-      manga_url,
-      current_ch,
-      chapters: ch_list,
-      nav: [{ prev, next }],
+      manga: mangaTitle || null,
+      manga_url: mangaUrl || null,
+      current_ch: chapterTitle || null,
+      images,
+      count: images.length,
     };
   } catch (err) {
-    return { error: err.message };
+    return {
+      error: true,
+      message: err.message,
+    };
   }
 }
 
@@ -257,6 +269,7 @@ module.exports = {
     info,
     chapter
 };
+
 
 
 
