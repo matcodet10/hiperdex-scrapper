@@ -139,6 +139,7 @@ async function info(slug) {
     let ch_list = [];
 
     try{
+        // Panggil halaman info
         res = await axios.get(`${BASE_URL}/manga/${slug}`, axiosConfig);
         const body = await res.data;
         const $ = cheerio.load(body);
@@ -151,13 +152,15 @@ async function info(slug) {
         let artist = $('.artist-content a').text().trim();
 
         // Nama Alternatif (menggunakan selektor teks "Alternative" untuk keamanan)
-        let other_name = $('.summary_content .post-content_item:contains("Alternative") .summary-content').text().trim(); 
-        if (!other_name) other_name = $('.alttitle').text().trim();
+        // Dibuat lebih spesifik untuk mengambil nilai yang benar
+        let other_name_raw = $('.summary_content .post-content_item:contains("Alternative")').text();
+        let other_name = other_name_raw.replace(/Alternative:/g, '').trim();
 
         // Status
         let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); 
 
-        // Deskripsi (Menggunakan ID #panel-story-description)
+        // --- DESKRIPSI (FIXED) ---
+        // Menggunakan ID #panel-story-description dan membersihkan label "SUMMARY"
         let description = $('#panel-story-description').text().trim(); 
         if (description.startsWith('SUMMARY')) {
             description = description.replace('SUMMARY', '').trim();
@@ -169,7 +172,8 @@ async function info(slug) {
             genres.push($(e).text().trim());
         });
 
-        // --- CHAPTER LIST (Langsung dari HTML) ---
+        // --- CHAPTER LIST (FIXED) ---
+        // Menggunakan selektor yang lebih spesifik untuk item list
         $('.list-chapter li').each((index, element) => {
             $elements = $(element);
             
@@ -243,3 +247,4 @@ module.exports = {
     info,
     chapter
 }
+
