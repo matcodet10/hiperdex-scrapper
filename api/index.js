@@ -10,7 +10,7 @@ app.get('/api/', (req, res) => {
     res.send(`
         Latest Chapters at: /api/latest/:page (example: /api/latest/1) <br>
         All Manhwa List at: /api/all/:page (example: /api/all/1) <br>
-        Manhwa Info + Chapters at: /api/info/manga/:slug (example: /api/info/manga/secret-class) <br>
+        Manhwa Info + Chapters at: /api/info/:slug (example: /api/info/secret-class) <br>
         Manhwa Images List at: /api/chapter/:manga/:chapter (example: /api/chapter/nano-machine/chapter-68/)
     `);
 });
@@ -36,7 +36,7 @@ app.get('/api/all/:page', async (req, res) => {
 
 
 // Info
-app.get('/api/info/manga/:slug', async (req, res) => {
+app.get('/api/info/:slug', async (req, res) => {
     const result = await scapper.info(req.params.slug);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.header("Content-Type", 'application/json');
@@ -66,5 +66,6 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 
 module.exports = app;
+
 
 
