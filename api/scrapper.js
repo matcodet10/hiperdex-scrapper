@@ -18,6 +18,19 @@ const axiosConfig = {
 };
 
 // =========================================
+// Helper Function: Membersihkan slug dari prefix/path (Fungsi yang hilang telah dikembalikan!)
+// =========================================
+function cleanSlug(slug) {
+    if (!slug) return '';
+    // Hapus prefix yang mungkin ikut terbawa dari router: /info, /manga, /chapter, dll.
+    let cleaned = slug.replace(/^(info\/|chapter\/|manga\/|manga-)/i, '');
+    // Hapus garis miring di awal jika ada
+    cleaned = cleaned.replace(/^\//, '');
+    return cleaned;
+}
+
+
+// =========================================
 // 1. LATEST
 // =========================================
 async function latest(page) {
@@ -126,7 +139,7 @@ async function all(page) {
 }
 
 // =========================================
-// 3. INFO
+// 3. INFO (Slug Cleaning Applied)
 // =========================================
 async function info(slug) {
   try {
@@ -134,7 +147,6 @@ async function info(slug) {
     const cleanedSlug = cleanSlug(slug);
 
     // URL yang dibentuk: https://manga18fx.com/manga/nailing-the-assignment-uncensored
-    // Ini adalah path yang dibutuhkan website sumber
     const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
@@ -192,14 +204,18 @@ async function info(slug) {
 }
 
 // =========================================
-// 4. CHAPTER (FULL FIXED)
+// 4. CHAPTER (Slug Cleaning Applied)
 // =========================================
 async function chapter(manga, chapter) {
   try {
     const BASE_URL = "https://manga18fx.com";
+    
+    // Memastikan slug bersih
+    const cleanedManga = cleanSlug(manga);
+    const cleanedChapter = cleanSlug(chapter);
 
     // Build URL secara aman
-    const url = `${BASE_URL}/manga/${manga}/${chapter}/`;
+    const url = `${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/`;
 
     console.log("🔍 Fetching Chapter:", url);
 
@@ -265,11 +281,3 @@ module.exports = {
   info,
   chapter,
 };
-
-
-
-
-
-
-
-
