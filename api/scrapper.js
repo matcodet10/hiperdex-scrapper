@@ -161,7 +161,8 @@ async function info(slug) {
             // Bersihkan label jika masih ada:
             if (description.startsWith('SUMMARY')) {
                 description = description.replace('SUMMARY', '').trim();
-    }
+            }
+        }
 
         // --- GENRES ---
         let genres_e = $('.genres-content a');
@@ -237,4 +238,5 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
