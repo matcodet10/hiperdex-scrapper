@@ -73,7 +73,13 @@ async function latest(page) {
 // =========================================
 async function all(page) {
   try {
-    const res = await axios.get(`${BASE_URL}/hot-manga}`, axiosConfig);
+    const pageNumber = parseInt(page) || 1;
+    const endpoint = (pageNumber > 1) 
+      ? `/hot-manga?page=${pageNumber}` 
+      : `/hot-manga`;
+    const url = `${BASE_URL}${endpoint}`;
+    const res = await axios.get(url, axiosConfig);
+
     const $ = cheerio.load(res.data);
 
     let m_list = [];
@@ -117,7 +123,6 @@ async function all(page) {
   } catch (e) {
     return { error: e.message };
   }
-}
 
 // =========================================
 // 3. INFO
@@ -254,6 +259,7 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
 
