@@ -130,7 +130,12 @@ async function all(page) {
 // =========================================
 async function info(slug) {
   try {
-    const res = await axios.get(`${BASE_URL}/manga/${slug}`, axiosConfig);
+    // Memastikan slug bersih dari prefix '/info/' atau '/manga/'
+    const cleanedSlug = cleanSlug(slug);
+
+    // URL yang dibentuk: https://manga18fx.com/manga/nailing-the-assignment-uncensored
+    // Ini adalah path yang dibutuhkan website sumber
+    const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let genres = [];
@@ -260,6 +265,7 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
 
