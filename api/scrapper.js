@@ -31,10 +31,13 @@ async function chaptersList(url){
             ch_list.push(chapters)    
         })
         return await (ch_list)
-    } catch(error) {
-        // console.log(error); // Aktifkan ini untuk debugging
-        return await ('Error Getting Chapters!')
-    }
+    } catch (error) {
+     // AKTIFKAN INI UNTUK MELIHAT PESAN ERROR ASLI DARI AXIOS
+     console.error("Gagal saat mengambil Info:", error.message); 
+     // Jika error adalah respons HTTP, coba log statusnya:
+     // console.error("Kode Status:", error.response.status); 
+     return await ({'error': 'Sorry dude, an error occured! No Info!'})
+ }
 }
 
 // --- Fungsi info(slug) (Detail Manhwa) ---
@@ -77,9 +80,12 @@ async function info(slug) {
              ch_list
          })
      } catch (error) {
-         // console.log(error); // Aktifkan ini untuk debugging
-         return await ({'error': 'Sorry dude, an error occured! No Info!'})
-     }
+     // AKTIFKAN INI UNTUK MELIHAT PESAN ERROR ASLI DARI AXIOS
+     console.error("Gagal saat mengambil Info:", error.message); 
+     // Jika error adalah respons HTTP, coba log statusnya:
+     // console.error("Kode Status:", error.response.status); 
+     return await ({'error': 'Sorry dude, an error occured! No Info!'})
+ }
 }
 
 // --- Fungsi all(page) (Daftar A-Z) ---
@@ -146,9 +152,12 @@ async function all(page) {
              'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
          })
      } catch (error) {
-         // console.log(error); // Aktifkan ini untuk debugging
-         return await ({'error': 'Sorry dude, an error occured! No Latest!'})
-     }
+     // AKTIFKAN INI UNTUK MELIHAT PESAN ERROR ASLI DARI AXIOS
+     console.error("Gagal saat mengambil Info:", error.message); 
+     // Jika error adalah respons HTTP, coba log statusnya:
+     // console.error("Kode Status:", error.response.status); 
+     return await ({'error': 'Sorry dude, an error occured! No Info!'})
+ }
 }
 
 // --- Fungsi latest(page) (Baru Diperbarui) ---
@@ -271,3 +280,4 @@ module.exports = {
     info,
     chapter
 }
+
