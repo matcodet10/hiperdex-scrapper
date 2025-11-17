@@ -77,7 +77,7 @@ async function all(page) {
     let m_list = []
 
     try{
-        res = await axios.get(`https://hiperdex.com/mangalist/page/${page}`)
+        res = await axios.get(`https://hiperdex.com/mangalist/${page}`)
         const body = await res.data;
         const $ = cheerio.load(body)
 
@@ -141,7 +141,7 @@ async function latest(page) {
     let m_list = []
 
     try{
-        res = await axios.get(`https://hiperdex.com/page/${page}`)
+        res = await axios.get(`https://hiperdex.com/${page}`)
         const body = await res.data;
         const $ = cheerio.load(body)
 
@@ -249,3 +249,4 @@ module.exports = {
     info,
     chapter
 }
+
