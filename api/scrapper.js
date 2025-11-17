@@ -73,7 +73,7 @@ async function latest(page) {
 // =========================================
 async function all(page) {
   try {
-    const res = await axios.get(`${BASE_URL}/hot-manga${page}`, axiosConfig);
+    const res = await axios.get(`${BASE_URL}/hot-manga}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let m_list = [];
@@ -254,6 +254,7 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
 
