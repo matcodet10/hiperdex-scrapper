@@ -204,30 +204,48 @@ async function chapter(manga, chapter) {
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // Selektor Gambar Chapter
-        $('.reading-content img').each((index, element) => {
+        // --- 1. PERBAIKAN GAMBAR: Selektor Gambar Chapter ---
+        // Mencoba selektor yang lebih agresif (entry-content)
+        $('.entry-content img, .reading-content img').each((index, element) => {
             $elements = $(element)
-            image = $elements.attr('src') ? $elements.attr('src').trim() : $elements.attr('data-src').trim() 
+            // Mengambil src atau data-src
+            let image = $elements.attr('src') || $elements.attr('data-src') || null; 
 
-            if (image && !image.includes('advertisement') && !image.includes('ads')) { 
-                ch_list.push({'ch': image}) 
+            if (image) {
+                // Bersihkan URL dari parameter yang tidak perlu
+                image = image.trim().split('?')[0]; 
+                
+                // Filter iklan dan gambar kecil/logo
+                if (!image.includes('advertisement') && !image.includes('ads') && !image.includes('logo')) { 
+                    // Pastikan gambar memiliki lebar/tinggi minimum (opsional, untuk filter noise)
+                    ch_list.push({'ch': image}) 
+                }
             }
         })
 
-        // --- NAVIGASI DAN JUDUL ---
+        // --- 2. PERBAIKAN JUDUL & NAVIGASI ---
+        
+        // Judul Chapter (Coba selektor umum untuk header)
+        let current_ch = $('.entry-header .c-chap-number').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
+        
+        // Navigasi (Coba selektor navigasi umum)
+        let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
+        let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
+        
+        // Data Manga (Berhasil)
         let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
         let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
         
-        let current_ch = $('#chapter-heading').text().trim();
-        
-        let prev = $('.nav-links .prev-link a').attr('href');
-        let next = $('.nav-links .next-link a').attr('href');
-        
+
         return await ({
-            'manga': manga_title, 'manga_url': manga_url, 'current_ch': current_ch,
-            'chapters': ch_list, 'nav': [{'prev': prev, 'next': next}]
+            'manga': manga_title,
+            'manga_url': manga_url,
+            'current_ch': current_ch,
+            'chapters': ch_list,
+            'nav': [{'prev': prev, 'next': next}]
         })
      } catch (error) {
+         // console.error(error); // Aktifkan untuk debugging
          return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
      }
 }
@@ -238,5 +256,6 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
 
 
