@@ -151,10 +151,17 @@ async function info(slug) {
         let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); 
 
         // --- DESKRIPSI (Mengambil teks dari kontainer deskripsi dan membersihkan label "SUMMARY") ---
-        let description = $('#panel-story-description').text().trim(); 
-        if (description.startsWith('SUMMARY')) {
-            description = description.replace('SUMMARY', '').trim();
-        }
+
+        
+       let description = $('.description-summary .summary__content').text().trim();
+        
+        if (!description) {
+            // Coba fallback ke ID yang kita identifikasi:
+            description = $('#panel-story-description').text().trim(); 
+            // Bersihkan label jika masih ada:
+            if (description.startsWith('SUMMARY')) {
+                description = description.replace('SUMMARY', '').trim();
+    }
 
         // --- GENRES ---
         let genres_e = $('.genres-content a');
@@ -230,3 +237,4 @@ module.exports = {
     info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
+
