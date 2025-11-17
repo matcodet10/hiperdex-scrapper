@@ -172,40 +172,52 @@ async function latest(page) {
     let m_list = []
 
     try{
-        // PERBAIKAN: Menggunakan axios.get dengan config
-        res = await axios.get(`https://hiperdex.com/page/${page}`, axiosConfig)
+        // URL BARU
+        res = await axios.get(`https://manga18fx.com/page/${page}`, axiosConfig) 
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        let p_title = $('.c-blog__heading h1').text().trim()
+        // Selektor Kontainer Utama Daftar Manga adalah .listupd
+        const listContainer = $('.listupd');
 
-        // PERBAIKAN SELEKTOR UTAMA: Menggunakan '.page-listing-item' (lebih stabil)
-        $('#loop-content .page-listing-item').each((index, element) => {
+        // SELEKTOR PERULANGAN: Setiap item manga adalah .bsx-item
+        listContainer.find('.bsx-item').each((index, element) => {
 
             $elements = $(element)
             
-            // PERBAIKAN SELEKTOR INTERNAL: Menggunakan selektor spesifik yang telah dikonfirmasi
-            image = $elements.find('.item-thumb img').attr('src')
-            url = $elements.find('.item-thumb a').attr('href')
-            title = $elements.find('.post-title h3 a').text().trim() 
-            rating = $elements.find('.total_votes').text().trim()
+            // --- 1. DATA MANGA ---
+            // URL ada di <a> pertama
+            url = $elements.find('a').attr('href')
+            
+            // Image ada di dalam <img> (Cek: biasanya menggunakan 'src' atau 'data-src')
+            image = $elements.find('img').attr('src')
+            
+            // Judul ada di atribut 'title' dari <a> atau di class .tt (kita coba dari title)
+            title = $elements.find('a').attr('title') 
+            
+            // Rating tidak terlihat jelas di screenshot, menggunakan class umum:
+            rating = $elements.find('.numscore').text().trim() 
 
-            chapter = $elements.find('.list-chapter .chapter-item')
+            // --- 2. DATA CHAPTER TERBARU ---
+            // Chapter list ada di dalam .epxs
+            chapter_items = $elements.find('.epxs a'); 
 
             let chapters = []
             
-            $(chapter).each((i,e)=>{
+            // Perulangan untuk chapter terbaru
+            $(chapter_items).each((i,e)=>{
 
-                let c_title = $(e).find('a').text().trim()
-                let c_url = $(e).find('a').attr('href')
-                let c_date = $(e).find('.post-on').text().trim()
-                let status = $(e).find('.post-on a').attr('title')
+                let c_title = $(e).text().trim() // Teks adalah judul chapter
+                let c_url = $(e).attr('href')
+                
+                // Tanggal ada di elemen <span> di dalam .epxs
+                let c_date = $(e).parent().find('span').text().trim()
 
                 chapters.push({
                     'c_title': c_title,
                     'c_url': c_url,
                     'c_date': c_date,
-                    'status': status
+                    'status': null // Status dihilangkan karena tidak ditemukan di sini
                 })
             })
 
@@ -218,21 +230,32 @@ async function latest(page) {
             })    
         })
 
-        let current = $('.current').text()
+        // --- 3. DATA PAGINATION ---
+        // Mencari pagination di bawah daftar
+        let current = $('.pagination .current').text()
+        let last_page_link = $('.pagination .last a').attr('href')
         
-        let last_page = $('.last').attr('href')
-        !last_page?last_page=current:last_page
-
+        // Logika untuk mendapatkan nomor halaman terakhir
+        let last_page = current;
+        if (last_page_link) {
+            const match = last_page_link.match(/page\/(\d+)/);
+            if (match) {
+                last_page = match[1];
+            }
+        }
+        
          return await ({
-             'p_title': p_title,
+             'p_title': 'Latest Updates',
              'list': m_list,
              'current_page': parseInt(current),
-             'last_page': parseInt(last_page.replace(/[^0-9]/g, ''))
+             'last_page': parseInt(last_page)
          })
      } catch (error) {
-         // console.log(error); // Aktifkan ini untuk debugging
+         // Aktifkan ini jika error muncul, untuk melihat status/pesan error sebenarnya
+         // console.error(error); 
          return await ({'error': 'Sorry dude, an error occured! No Latest!'})
      }
+
 }
 
 // --- Fungsi chapter(manga, chapter) (Gambar Chapter) ---
@@ -286,5 +309,6 @@ module.exports = {
     info,
     chapter
 }
+
 
 
