@@ -187,6 +187,7 @@ async function chapter(chapterUrl) {
   try {
     const res = await axios.get(chapterUrl, axiosConfig);
     const $ = cheerio.load(res.data);
+    console.log("🔍 Fetching URL:", `${BASE_URL}/manga/${manga}/${chapter}`);
 
     const mangaTitle =
       $(".breadcrumb li:nth-child(3) a").text().trim() ||
@@ -234,3 +235,4 @@ module.exports = {
   info,
   chapter,
 };
+
