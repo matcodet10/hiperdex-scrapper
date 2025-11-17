@@ -78,7 +78,7 @@ async function all(page) {
     let m_list = [];
 
     try {
-        const res = await axios.get(`${BASE_URL}/manga-genre/manhwa/${page}`, { headers: axiosConfig.headers });
+        const res = await axios.get(`${BASE_URL}/hot-manga${page}`, { headers: axiosConfig.headers });
         const body = res.data;
         const $ = cheerio.load(body);
 
@@ -257,5 +257,6 @@ module.exports = {
     info,
     chapter
 };
+
 
 
