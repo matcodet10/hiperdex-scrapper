@@ -1,4 +1,4 @@
-const scrapper = require('./Scrapper'); 
+const scrapper = require('./scrapper'); 
 const express = require('express');
 const cors = require('cors');
 
@@ -41,3 +41,4 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 
 module.exports = app;
+
