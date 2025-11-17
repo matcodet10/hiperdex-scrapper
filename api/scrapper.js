@@ -42,12 +42,7 @@ async function latest(page) {
                 let c_url = $(e).attr('href')
                 let c_date = $(e).parent().find('span').text().trim()
 
-                chapters.push({
-                    'c_title': c_title,
-                    'c_url': c_url,
-                    'c_date': c_date,
-                    'status': null 
-                })
+                chapters.push({ 'c_title': c_title, 'c_url': c_url, 'c_date': c_date, 'status': null })
             })
 
             m_list.push({'title': title, 'rating': rating, 'image': image, 'url': url, 'chapters': chapters})    
@@ -134,46 +129,62 @@ async function all(page) {
 }
 
 // --- 3. FUNGSI info(slug) (DETAIL MANHWA) ---
-async function chapter(manga, chapter) {
-    let ch_list = []
+async function info(slug) {
+    let genres = [];
+    let ch_list = [];
+
     try{
-        // URL Chapter
-        res = await axios.get(`${BASE_URL}/manga/${manga}/${chapter}`, axiosConfig)
+        res = await axios.get(`${BASE_URL}/manga/${slug}`, axiosConfig);
         const body = await res.data;
-        const $ = cheerio.load(body)
+        const $ = cheerio.load(body);
 
-        // Selektor Gambar Chapter (umumnya .reading-content img)
-        $('.reading-content img').each((index, element) => {
-            $elements = $(element)
-            // Mengambil src atau data-src
-            image = $elements.attr('src') ? $elements.attr('src').trim() : $elements.attr('data-src').trim() 
+        // --- DATA DETAIL MANGA ---
+        let manhwa_title = $('.post-title h1').text().trim();
+        let poster = $('.summary_image img').attr('src'); 
+        
+        let author = $('.author-content a').text().trim();
+        let artist = $('.artist-content a').text().trim();
 
-            if (image && !image.includes('advertisement') && !image.includes('ads')) { // Filter iklan
-                ch_list.push({'ch': image}) 
-            }
-        })
+        let other_name_raw = $('.summary_content .post-content_item:contains("Alternative")').text();
+        let other_name = other_name_raw.replace(/Alternative:/g, '').trim();
 
-        // --- NAVIGASI DAN JUDUL ---
-        let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
-        let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
+        let status = $('.post-status .post-content_item:nth-child(2) div:nth-child(2)').text().trim(); 
+
+        // --- DESKRIPSI (Mengambil teks dari kontainer deskripsi dan membersihkan label "SUMMARY") ---
+        let description = $('#panel-story-description').text().trim(); 
+        if (description.startsWith('SUMMARY')) {
+            description = description.replace('SUMMARY', '').trim();
+        }
+
+        // --- GENRES ---
+        let genres_e = $('.genres-content a');
+        $(genres_e).each((i,e)=>{
+            genres.push($(e).text().trim());
+        });
+
+        // --- CHAPTER LIST ---
+        // Selektor yang benar: ul.row-content-chapter li
+        $('ul.row-content-chapter li').each((index, element) => {
+            $elements = $(element);
+            
+            let title = $elements.find('a.chapter-name').text().trim(); 
+            let url = $elements.find('a.chapter-name').attr('href');
+            let time = $elements.find('span.chapter-time').text().trim(); 
+            
+            ch_list.push({'ch_title': title, 'time': time, 'url': url});    
+        });
         
-        let current_ch = $('#chapter-heading').text().trim();
-        
-        // Navigasi
-        let prev = $('.nav-links .prev-link a').attr('href');
-        let next = $('.nav-links .next-link a').attr('href');
-        
+        ch_list.reverse();
 
         return await ({
-            'manga': manga_title,
-            'manga_url': manga_url,
-            'current_ch': current_ch,
-            'chapters': ch_list,
-            'nav': [{'prev': prev, 'next': next}]
-        })
-     } catch (error) {
-         return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
-     }
+            'page': manhwa_title, 'other_name': other_name, 'poster': poster,
+            'authors': author, 'artists': artist, 'genres': genres, 
+            'status': status, 'description': description, 'ch_list': ch_list 
+        });
+
+    } catch (error) {
+         return await ({'error': 'Sorry dude, an error occured! No Info!'});
+    }
 }
 
 // --- 4. FUNGSI chapter(manga, chapter) (GAMBAR CHAPTER) ---
@@ -185,13 +196,12 @@ async function chapter(manga, chapter) {
         const body = await res.data;
         const $ = cheerio.load(body)
 
-        // Selektor Gambar Chapter (umumnya .reading-content img)
+        // Selektor Gambar Chapter
         $('.reading-content img').each((index, element) => {
             $elements = $(element)
-            // Cek apakah menggunakan 'src' atau 'data-src'
             image = $elements.attr('src') ? $elements.attr('src').trim() : $elements.attr('data-src').trim() 
 
-            if (image) {
+            if (image && !image.includes('advertisement') && !image.includes('ads')) { 
                 ch_list.push({'ch': image}) 
             }
         })
@@ -205,25 +215,18 @@ async function chapter(manga, chapter) {
         let prev = $('.nav-links .prev-link a').attr('href');
         let next = $('.nav-links .next-link a').attr('href');
         
-
         return await ({
-            'manga': manga_title,
-            'manga_url': manga_url,
-            'current_ch': current_ch,
-            'chapters': ch_list,
-            'nav': [{'prev': prev, 'next': next}]
+            'manga': manga_title, 'manga_url': manga_url, 'current_ch': current_ch,
+            'chapters': ch_list, 'nav': [{'prev': prev, 'next': next}]
         })
      } catch (error) {
          return await ({'error': 'Sorry dude, an error occured! No Chapter Images!'})
      }
-
 }
 
 module.exports = {
     latest,
     all,
-    info,
+    info, // <-- PASTIKAN DI EKSPOR
     chapter
 }
-
-
