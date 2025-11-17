@@ -228,10 +228,9 @@ async function chapter(manga, chapter) {
         let current_ch = $('.breadcrumb > li:nth-child(3)').text().trim() || $('#chapter-heading').text().trim() || $('.entry-header h1').text().trim();
         let manga_title = $('.breadcrumb > li:nth-child(2) > a').text().trim();
         let manga_url = $('.breadcrumb > li:nth-child(2) > a').attr('href');
-
         let prev = $('.nav-links .prev-link a').attr('href') || $('.ch-nav-btn.prev a').attr('href');
         let next = $('.nav-links .next-link a').attr('href') || $('.ch-nav-btn.next a').attr('href');
-        
+
         if (prev === '#') prev = null;
         if (next === '#') next = null;
 
@@ -253,3 +252,4 @@ module.exports = {
     info,
     chapter
 }
+
