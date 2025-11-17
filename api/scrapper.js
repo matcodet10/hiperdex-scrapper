@@ -202,19 +202,15 @@ async function chapter(manga, chapter) {
 
     const $ = cheerio.load(data);
 
-    // Manga Title
-    const mangaTitle =
-      $(".breadcrumb li:nth-child(3) a").text().trim() ||
-      $(".post-title h1").text().trim();
+    const breadcrumb = $(".breadcrumb li");
 
-    // Manga URL
-    const mangaUrl =
-      $(".breadcrumb li:nth-child(3) a").attr("href") || null;
+    const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
+    const mangaUrl = $(breadcrumb[2]).find("a").attr("href") || null;
 
-    // Chapter Title
     const chapterTitle =
-      $(".breadcrumb li:nth-child(4)").text().trim() ||
-      $(".chapter-header h1").text().trim();
+    $(breadcrumb[3]).text().trim() ||
+    $(".entry-title").text().trim() ||
+    $(".chapter-details h1").text().trim();
 
     // Image Scraping
     const images = [];
@@ -255,5 +251,6 @@ module.exports = {
   info,
   chapter,
 };
+
 
 
