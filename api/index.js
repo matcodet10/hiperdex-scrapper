@@ -10,7 +10,7 @@ app.get('/api/', (req, res) => {
     res.send(`
         Latest Chapters at: /api/latest/:page (example: /api/latest/1) <br>
         All Manhwa List at: /api/all/:page (example: /api/all/1) <br>
-        Manhwa Info + Chapters at: /api/info/:slug (example: /api/info/secret-class) <br>
+        Manhwa Info + Chapters at: /api/info/manga/:slug (example: /api/info/manga/secret-class) <br>
         Manhwa Images List at: /api/chapter/:manga/:chapter (example: /api/chapter/nano-machine/chapter-68/)
     `);
 });
@@ -66,4 +66,5 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 
 
 module.exports = app;
+
 
