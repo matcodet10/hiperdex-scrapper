@@ -89,7 +89,7 @@ async function all(page) {
 
       const url = $el.find("a").attr("href");
       const image = $el.find("img").attr("src");
-      const title = $el.find("a").attr("title");
+      const title = $el.find("h3.tt a").text().trim();
       const rating = $el.find(".numscore").text().trim();
 
       let chapters = [];
@@ -166,7 +166,7 @@ async function info(slug) {
       });
     });
 
-    ch_list.reverse();
+    //ch_list.reverse();
 
     return {
       page: manhwa_title,
@@ -254,3 +254,4 @@ module.exports = {
   info,
   chapter,
 };
+
