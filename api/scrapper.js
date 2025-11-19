@@ -21,21 +21,19 @@ function cleanSlug(slug) {
   return cleaned;
 }
 
-// 📌 LATEST
 async function latest(page) {
   try {
-    const res = await axios.get(`${BASE_URL}/page/${page}`, axiosConfig);
+    const res = await axios.get(${BASE_URL}/page/${page}, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let m_list = [];
 
-    $(".listupd .bs").each((i, el) => {
+    $(".listupd .bsx-item").each((i, el) => {
       const $el = $(el);
 
       const url = $el.find("a").attr("href");
-      const title = $el.find(".tt").text().trim();
-      const image =
-        $el.find("img").attr("src") || $el.find("img").attr("data-src");
+      const image = $el.find("img").attr("src");
+      const title = $el.find("a").attr("title");
       const rating = $el.find(".numscore").text().trim();
 
       let chapters = [];
@@ -44,6 +42,7 @@ async function latest(page) {
           c_title: $(c).text().trim(),
           c_url: $(c).attr("href"),
           c_date: $(c).parent().find("span").text().trim(),
+          status: null,
         });
       });
 
@@ -70,29 +69,24 @@ async function latest(page) {
   }
 }
 
-// 📌 ALL / HOT MANHWA
 async function all(page) {
   try {
     const pageNumber = parseInt(page) || 1;
     const endpoint =
-      pageNumber > 1
-        ? `/hot-manga?page=${pageNumber}`
-        : `/hot-manga`;
-
-    const url = `${BASE_URL}${endpoint}`;
+      pageNumber > 1 ? /hot-manga?page=${pageNumber} : /hot-manga;
+    const url = ${BASE_URL}${endpoint};
     const res = await axios.get(url, axiosConfig);
 
     const $ = cheerio.load(res.data);
 
     let m_list = [];
 
-    $(".listupd .bs").each((i, el) => {
+    $(".listupd .bsx-item").each((i, el) => {
       const $el = $(el);
 
       const url = $el.find("a").attr("href");
-      const image =
-        $el.find("img").attr("src") || $el.find("img").attr("data-src");
-      const title = $el.find(".tt").text().trim();
+      const image = $el.find("img").attr("src");
+      const title = $el.find("a").attr("title");
       const rating = $el.find(".numscore").text().trim();
 
       let chapters = [];
@@ -101,6 +95,7 @@ async function all(page) {
           c_title: $(c).text().trim(),
           c_url: $(c).attr("href"),
           c_date: $(c).parent().find("span").text().trim(),
+          status: null,
         });
       });
 
@@ -112,7 +107,7 @@ async function all(page) {
 
     const last_page_link = $(".pagination .last a").attr("href");
     if (last_page_link) {
-      const match = last_page_link.match(/page=(\d+)/);
+      const match = last_page_link.match(/\/(\d+)\/?$/);
       if (match) last_page = parseInt(match[1]);
     }
 
@@ -127,11 +122,10 @@ async function all(page) {
   }
 }
 
-// 📌 INFO PAGE
 async function info(slug) {
   try {
     const cleanedSlug = cleanSlug(slug);
-    const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
+    const res = await axios.get(${BASE_URL}/manga/${cleanedSlug}, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let genres = [];
@@ -139,20 +133,25 @@ async function info(slug) {
 
     const manhwa_title = $(".post-title h1").text().trim();
     const poster = $(".summary_image img").attr("src");
+
     const author = $(".author-content a").text().trim();
     const artist = $(".artist-content a").text().trim();
 
     const other_name_raw = $(
       '.summary_content .post-content_item:contains("Alternative")'
     ).text();
-    const other_name = other_name_raw.replace("Alternative", "").trim();
+    const other_name = other_name_raw.replace(/Alternative:/g, "").trim();
 
-    const status = $(".post-status .post-content_item:nth-child(2) div:nth-child(2)")
+    const status = $(
+      ".post-status .post-content_item:nth-child(2) div:nth-child(2)"
+    )
       .text()
       .trim();
 
     let description = $("#panel-story-description").text().trim();
-    description = description.replace(/^SUMMARY/i, "").trim();
+    if (description.startsWith("SUMMARY")) {
+      description = description.replace("SUMMARY", "").trim();
+    }
 
     $(".genres-content a").each((i, e) => genres.push($(e).text().trim()));
 
@@ -162,11 +161,10 @@ async function info(slug) {
       ch_list.push({
         ch_title: $el.find("a.chapter-name").text().trim(),
         url: $el.find("a.chapter-name").attr("href"),
-        time: $el.find(".chapter-time").text().trim(),
+        time: $el.find("span.chapter-time").text().trim(),
       });
     });
 
-    // reverse untuk urutan ASC dari chapter awal
     ch_list.reverse();
 
     return {
@@ -185,17 +183,25 @@ async function info(slug) {
   }
 }
 
-// 📌 CHAPTER PAGE
 async function chapter(manga, chapter) {
   try {
+    const BASE_URL = "https://manga18fx.com";
+
     const cleanedManga = cleanSlug(manga);
     const cleanedChapter = cleanSlug(chapter);
 
-    const url = `${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/`;
+    const url = ${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/;
 
     console.log("🔍 Fetching Chapter:", url);
 
-    const { data } = await axios.get(url, axiosConfig);
+    const { data } = await axios.get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+
     const $ = cheerio.load(data);
 
     const breadcrumb = $(".breadcrumb li");
@@ -213,20 +219,25 @@ async function chapter(manga, chapter) {
     $(".page-break img").each((i, el) => {
       const dataSrc = $(el).attr("data-src");
       const src = $(el).attr("src");
-      const img = dataSrc || src;
 
-      if (img && img.startsWith("http")) images.push(img.trim());
+      const img = dataSrc || src;
+      if (img && img.startsWith("http")) {
+        images.push(img.trim());
+      }
     });
 
     return {
       manga: mangaTitle || "Unknown Title",
       manga_url: mangaUrl,
       current_ch: chapterTitle,
-      images,
+      images: images,
       count: images.length,
     };
   } catch (err) {
-    return { error: true, message: err.message };
+    return {
+      error: true,
+      message: err.message,
+    };
   }
 }
 
