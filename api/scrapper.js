@@ -154,7 +154,8 @@ async function info(slug) {
 
     $(".genres-content a").each((i, e) => genres.push($(e).text().trim()));
 
-    $("ul.row-content-chapter li").each((i, el) => {
+    // ⬇️ BALIK URUTAN CHAPTERS
+    $("ul.row-content-chapter li").get().reverse().forEach((el) => {
       const $el = $(el);
       ch_list.push({
         ch_title: $el.find("a.chapter-name").text().trim(),
@@ -162,8 +163,6 @@ async function info(slug) {
         time: $el.find(".chapter-time").text().trim(),
       });
     });
-
-    ch_list.reverse();
 
     return {
       page: title,
@@ -180,6 +179,7 @@ async function info(slug) {
     return { error: e.message };
   }
 }
+
 
 /* ========================================== */
 /*                CHAPTER                     */
@@ -232,3 +232,4 @@ module.exports = {
   info,
   chapter,
 };
+
