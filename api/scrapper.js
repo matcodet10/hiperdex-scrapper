@@ -84,12 +84,12 @@ async function all(page) {
 
     let m_list = [];
 
-    $(".listupd .bsx-item").each((i, el) => {
+    $(".listupd .bs").each((i, el) => {
       const $el = $(el);
 
       const url = $el.find("a").attr("href");
       const image = $el.find("img").attr("src");
-      const title = $el.find("a").attr("title");
+      const title = $el.find(".tt").text().trim();
       const rating = $el.find(".numscore").text().trim();
 
       let chapters = [];
@@ -254,4 +254,5 @@ module.exports = {
   info,
   chapter,
 };
+
 
