@@ -1,6 +1,7 @@
 const cheerio = require("cheerio");
 const axios = require("axios");
 
+
 const BASE_URL = "https://manga18fx.com";
 
 const axiosConfig = {
@@ -15,15 +16,15 @@ const axiosConfig = {
 };
 
 function cleanSlug(slug) {
-  if (!slug) return "";
-  let cleaned = slug.replace(/^(info\/|chapter\/|manga\/|manga-)/i, "");
-  cleaned = cleaned.replace(/^\//, "");
-  return cleaned;
+    if (!slug) return '';
+    let cleaned = slug.replace(/^(info\/|chapter\/|manga\/|manga-)/i, '');
+    cleaned = cleaned.replace(/^\//, '');
+    return cleaned;
 }
 
 async function latest(page) {
   try {
-    const res = await axios.get(${BASE_URL}/page/${page}, axiosConfig);
+    const res = await axios.get(`${BASE_URL}/page/${page}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let m_list = [];
@@ -69,12 +70,14 @@ async function latest(page) {
   }
 }
 
+
 async function all(page) {
   try {
     const pageNumber = parseInt(page) || 1;
-    const endpoint =
-      pageNumber > 1 ? /hot-manga?page=${pageNumber} : /hot-manga;
-    const url = ${BASE_URL}${endpoint};
+    const endpoint = (pageNumber > 1) 
+      ? `/hot-manga?page=${pageNumber}` 
+      : `/hot-manga`;
+    const url = `${BASE_URL}${endpoint}`;
     const res = await axios.get(url, axiosConfig);
 
     const $ = cheerio.load(res.data);
@@ -125,7 +128,7 @@ async function all(page) {
 async function info(slug) {
   try {
     const cleanedSlug = cleanSlug(slug);
-    const res = await axios.get(${BASE_URL}/manga/${cleanedSlug}, axiosConfig);
+    const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
     const $ = cheerio.load(res.data);
 
     let genres = [];
@@ -142,9 +145,7 @@ async function info(slug) {
     ).text();
     const other_name = other_name_raw.replace(/Alternative:/g, "").trim();
 
-    const status = $(
-      ".post-status .post-content_item:nth-child(2) div:nth-child(2)"
-    )
+    const status = $(".post-status .post-content_item:nth-child(2) div:nth-child(2)")
       .text()
       .trim();
 
@@ -186,11 +187,12 @@ async function info(slug) {
 async function chapter(manga, chapter) {
   try {
     const BASE_URL = "https://manga18fx.com";
-
+    
     const cleanedManga = cleanSlug(manga);
     const cleanedChapter = cleanSlug(chapter);
 
-    const url = ${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/;
+
+    const url = `${BASE_URL}/manga/${cleanedManga}/${cleanedChapter}/`;
 
     console.log("🔍 Fetching Chapter:", url);
 
@@ -199,47 +201,52 @@ async function chapter(manga, chapter) {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
-      },
+      }
     });
 
     const $ = cheerio.load(data);
 
-    const breadcrumb = $(".breadcrumb li");
+        const breadcrumb = $(".breadcrumb li");
 
-    const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
-    const mangaUrl = $(breadcrumb[2]).find("a").attr("href")?.trim() || null;
+        const mangaTitle = $(breadcrumb[2]).find("a").text().trim();
+        const mangaUrl = $(breadcrumb[2]).find("a").attr("href")?.trim() || null;
 
-    const chapterTitle =
-      $(breadcrumb[3]).text().trim() ||
-      $(".entry-title").text().trim() ||
-      chapter.replace("-", " ").toUpperCase();
 
-    const images = [];
+        const chapterTitle =
+            $(breadcrumb[3]).text().trim() ||
+            $(".entry-title").text().trim() ||
+            chapter.replace("-", " ").toUpperCase();
 
-    $(".page-break img").each((i, el) => {
-      const dataSrc = $(el).attr("data-src");
-      const src = $(el).attr("src");
+        const images = [];
 
-      const img = dataSrc || src;
-      if (img && img.startsWith("http")) {
-        images.push(img.trim());
-      }
-    });
+        $(".page-break img").each((i, el) => {
+            const dataSrc = $(el).attr("data-src");
+            const src = $(el).attr("src");
 
-    return {
-      manga: mangaTitle || "Unknown Title",
-      manga_url: mangaUrl,
-      current_ch: chapterTitle,
-      images: images,
-      count: images.length,
-    };
-  } catch (err) {
-    return {
-      error: true,
-      message: err.message,
-    };
-  }
+            const img = dataSrc || src;
+            if (img && img.startsWith("http")) {
+                images.push(img.trim());
+            }
+        });
+
+        return {
+            manga: mangaTitle || "Unknown Title",
+            manga_url: mangaUrl,
+            current_ch: chapterTitle,
+            images: images,
+            count: images.length,
+        };
+
+    } catch (err) {
+        return {
+            error: true,
+            message: err.message,
+        };
+    }
 }
+
+//semoga ini berhasil
+
 
 module.exports = {
   latest,
