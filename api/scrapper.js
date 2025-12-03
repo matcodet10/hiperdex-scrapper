@@ -28,7 +28,6 @@ async function search(query, page = 1) {
         const pageNumber = parseInt(page) || 1;
         const encodedQuery = encodeURIComponent(query);
         
-        // Pola URL pencarian umum: {BASE_URL}/page/{page}/?s={query}
         const url = `${BASE_URL}/page/${pageNumber}/?s=${encodedQuery}`;
         
         const res = await axios.get(url, axiosConfig);
@@ -60,7 +59,6 @@ async function search(query, page = 1) {
         const current = parseInt($(".pagination .current").text() || 1);
         let last_page = current;
 
-        // Mendapatkan last_page dari pagination
         const last_page_link = $(".pagination .last a").attr("href");
         if (last_page_link) {
             const match = last_page_link.match(/page\/(\d+)/);
@@ -185,18 +183,25 @@ async function all(page) {
 }
 
 // FUNGSI INFO (DETAIL MANHWA + SINOPSIS)
-// FUNGSI INFO (DETAIL MANHWA + SINOPSIS)
 async function info(slug) {
     try {
         const cleanedSlug = cleanSlug(slug);
         const res = await axios.get(`${BASE_URL}/manga/${cleanedSlug}`, axiosConfig);
         const $ = cheerio.load(res.data);
 
-        // ... (bagian atas kode: title, poster, author, status, genres, dll. sama)
-        
         let genres = [];
         let ch_list = [];
-        // ... (pengambilan data lain yang tidak terkait sinopsis)
+
+        const manhwa_title = $(".post-title h1").text().trim();
+        const poster = $(".summary_image img").attr("src");
+
+        const author = $(".author-content a").text().trim();
+        const artist = $(".artist-content a").text().trim();
+
+        const other_name_raw = $(
+            '.summary_content .post-content_item:contains("Alternative")'
+        ).text();
+        const other_name = other_name_raw.replace(/Alternative:/g, "").trim();
 
         const status = $(".post-status .post-content_item:nth-child(2) div:nth-child(2)")
             .text()
@@ -208,39 +213,44 @@ async function info(slug) {
         let description = "";
         const container = $("#panel-story-description");
         
-        // Coba target yang lebih spesifik jika ada (seperti .ts-main-desc)
+        // Target yang lebih spesifik berdasarkan analisis HTML
         const specific_desc = container.find('.ts-main-desc'); 
+        const target_el = specific_desc.length > 0 ? specific_desc : container;
 
-        if (specific_desc.length > 0) {
-            // Jika elemen spesifik ditemukan, gunakan itu sebagai dasar
-            const target_el = specific_desc;
 
-            if (target_el.find("p").length > 0) {
-                // Kasus 1: Teks dipecah menjadi paragraf (seperti MILF Exchange Plan)
-                target_el.find("p").each((i, el) => {
-                    description += $(el).text().trim() + "\n\n";
-                });
-                description = description.trim();
-            } else {
-                // Kasus 2: Teks mentah atau di dalam satu div (seperti Secret Class)
-                description = target_el.text().trim();
-            }
+        if (target_el.find("p").length > 0) {
+            // Kasus 1: Teks dipecah menjadi paragraf (<p>)
+            target_el.find("p").each((i, el) => {
+                description += $(el).text().trim() + "\n\n";
+            });
+            description = description.trim();
         } else {
-            // Fallback: Ambil semua teks langsung dari kontainer utama
-            description = container.text().trim();
+            // Kasus 2: Teks mentah atau di dalam satu div (misal, Secret Class)
+            description = target_el.text().trim();
         }
 
-        // Pembersihan khusus: hapus awalan yang tidak diinginkan
+        // Pembersihan khusus: hapus awalan yang tidak diinginkan (case-insensitive)
         if (description.startsWith("SUMMARY")) {
             description = description.replace(/^SUMMARY\s*/i, "").trim();
         } else if (description.startsWith("SINOPSIS")) {
             description = description.replace(/^SINOPSIS\s*/i, "").trim();
         }
-
+        
         // --------------------------------------------------------
-
+        
         $(".genres-content a").each((i, e) => genres.push($(e).text().trim()));
-        // ... (lanjutan ch_list, dan return object)
+
+        $("ul.row-content-chapter li").each((i, el) => {
+            const $el = $(el);
+
+            ch_list.push({
+                ch_title: $el.find("a.chapter-name").text().trim(),
+                url: $el.find("a.chapter-name").attr("href"),
+                time: $el.find("span.chapter-time").text().trim(),
+            });
+        });
+
+        //ch_list.reverse();
 
         return {
             page: manhwa_title,
@@ -250,13 +260,13 @@ async function info(slug) {
             artists: artist,
             genres,
             status,
-            description, // <-- FIELD SINOPSIS
+            description, // <-- FIELD SINOPSIS BARU
             ch_list,
         };
     } catch (e) {
         return { error: e.message };
     }
-}  
+}
 
 // FUNGSI CHAPTER
 async function chapter(manga, chapter) {
@@ -274,7 +284,7 @@ async function chapter(manga, chapter) {
         const { data } = await axios.get(url, {
             headers: {
                 "User-Agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/555.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept-Language": "en-US,en;q=0.9",
             }
         });
@@ -321,7 +331,7 @@ async function chapter(manga, chapter) {
 }
 
 
-// EXPORT FUNGSI (PENTING UNTUK MENGHINDARI TypeError)
+// EXPORT FUNGSI (PENTING)
 module.exports = {
     latest,
     all,
@@ -329,4 +339,3 @@ module.exports = {
     chapter,
     search, 
 };
-
