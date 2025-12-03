@@ -208,34 +208,64 @@ async function info(slug) {
             .trim();
 
         // --------------------------------------------------------
-        // --- LOGIKA PENGAMBILAN SINOPSIS (Description) YANG LEBIH KUAT ---
+        // --- LOGIKA PENGAMBILAN SINOPSIS (Description) REVISI FINAL ---
         // --------------------------------------------------------
         let description = "";
-        const container = $("#panel-story-description");
         
-        // Target yang lebih spesifik berdasarkan analisis HTML
-        const specific_desc = container.find('.ts-main-desc'); 
-        const target_el = specific_desc.length > 0 ? specific_desc : container;
+        // Coba beberapa kontainer umum yang mungkin menyimpan deskripsi
+        const possible_containers = [
+            $("#panel-story-description"), // Umum
+            $(".dsct"),                    // Ditemukan di beberapa manga
+            $(".entry-content"),           // Kontainer konten utama
+        ];
+        
+        for (const container of possible_containers) {
+            if (container.length === 0) continue; 
+            
+            let temp_desc = "";
+            
+            // 1. Prioritaskan teks di dalam elemen <p>
+            if (container.find("p").length > 0) {
+                container.find("p").each((i, el) => {
+                    temp_desc += $(el).text().trim() + "\n\n";
+                });
+            } else {
+                // 2. Ambil semua teks dari kontainer, termasuk teks mentah
+                temp_desc = container.text();
+            }
 
+            // Pembersihan agresif sebelum trim
+            // Hapus karakter non-cetak dan spasi berlebihan
+            temp_desc = temp_desc.replace(/[\r\n\t]/g, ' ').replace(/\s\s+/g, ' ').trim();
 
-        if (target_el.find("p").length > 0) {
-            // Kasus 1: Teks dipecah menjadi paragraf (<p>)
-            target_el.find("p").each((i, el) => {
-                description += $(el).text().trim() + "\n\n";
-            });
-            description = description.trim();
-        } else {
-            // Kasus 2: Teks mentah atau di dalam satu div (misal, Secret Class)
-            description = target_el.text().trim();
+            // Pembersihan awal SUMMARY/SINOPSIS
+            temp_desc = temp_desc.replace(/^SUMMARY\s*/i, "").trim();
+            temp_desc = temp_desc.replace(/^SINOPSIS\s*/i, "").trim();
+            
+            // Jika sinopsis terambil (misal, panjangnya lebih dari 20 karakter setelah dibersihkan), gunakan dan hentikan loop
+            if (temp_desc.length > 20) {
+                description = temp_desc;
+                break;
+            }
+        }
+        
+        // Pembersihan akhir (hanya jika sinopsis terisi)
+        if (description.length > 0) {
+            // Hapus teks menu atau teks promosi yang mungkin tersisa
+            const unwanted_text = [
+                "Secret Class Chapters", 
+                "Description", 
+                "Manga Description",
+                // Hapus juga judul chapter yang mungkin ikut terambil
+                /^Chapter\s*\d+\s*\d+ \w+\s*\d+$/gm // Pola: "Chapter 282 19 Nov 25"
+            ];
+            
+            for (const text of unwanted_text) {
+                description = description.replace(new RegExp(text, 'gi'), "").trim();
+            }
         }
 
-        // Pembersihan khusus: hapus awalan yang tidak diinginkan (case-insensitive)
-        if (description.startsWith("SUMMARY")) {
-            description = description.replace(/^SUMMARY\s*/i, "").trim();
-        } else if (description.startsWith("SINOPSIS")) {
-            description = description.replace(/^SINOPSIS\s*/i, "").trim();
-        }
-        
+
         // --------------------------------------------------------
         
         $(".genres-content a").each((i, e) => genres.push($(e).text().trim()));
@@ -339,3 +369,4 @@ module.exports = {
     chapter,
     search, 
 };
+
