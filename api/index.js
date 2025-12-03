@@ -11,7 +11,14 @@ app.get('/api/', (req, res) => {
         Latest Chapters at: /api/latest/:page (example: /api/latest/1) <br>
         All Manhwa List at: /api/all/:page (example: /api/all/1) <br>
         Manhwa Info + Chapters at: /api/info/:slug (example: /api/info/secret-class) <br>
-        Manhwa Images List at: /api/chapter/:manga/:chapter (example: /api/chapter/nano-machine/chapter-68/)
+        Manhwa Images List at: /api/chapter/:manga/:chapter (example: /api/chapter/nano-machine/chapter-68/) <br>
+        
+        <br>
+        
+        <h3 style="color: green;">
+            Search Feature API: 
+            /api/search/:query/:page (example: /api/search/sister/1)
+        </h3>
     `);
 });
 
@@ -65,7 +72,26 @@ app.get('/api/chapter/:manga/:chapter', async (req, res) => {
 });
 
 
+app.get('/api/search/:query/:page?', async (req, res) => {
+    try {
+        const query = req.params.query;
+        const page = req.params.page || 1; 
+
+        if (!query) {
+             return res.status(400).json({ error: "Search query is required." });
+        }
+
+        const result = await scapper.search(query, page);
+
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.header("Content-Type", 'application/json');
+        res.send(JSON.stringify(result, null, 4));
+
+    } catch (error) {
+        console.error("Error in /api/search:", error);
+        res.status(500).json({ error: "Failed to perform search operation." });
+    }
+});
+
+
 module.exports = app;
-
-
-
